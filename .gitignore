@@ -1,0 +1,17 @@
+# SDD local artifacts
+.atl/
+
+# Engram local project config
+.engram/
+
+# Next.js build output
+.next/
+out/
+
+# dependencies
+node_modules/
+
+# env
+.env
+.env.*
+!.env.example
