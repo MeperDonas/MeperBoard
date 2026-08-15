@@ -11,6 +11,9 @@ out/
 # dependencies
 node_modules/
 
+# TypeScript incremental build info
+*.tsbuildinfo
+
 # env
 .env
 .env.*
