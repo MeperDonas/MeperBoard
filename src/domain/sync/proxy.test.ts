@@ -1,0 +1,120 @@
+import { describe, expect, it, vi } from "vitest";
+
+import {
+  GITHUB_API_BASE,
+  buildGithubApiUrl,
+  isAllowedMethod,
+  proxyGithubRequest,
+  resolveToken,
+} from "./proxy";
+
+describe("buildGithubApiUrl", () => {
+  it("builds an api.github.com URL from path segments", () => {
+    expect(buildGithubApiUrl(["repos", "meperdonas", "meperboard", "issues"])).toBe(
+      `${GITHUB_API_BASE}/repos/meperdonas/meperboard/issues`,
+    );
+  });
+
+  it("percent-encodes segments that need it", () => {
+    expect(buildGithubApiUrl(["repos", "a b", "x/y", "issues"])).toBe(
+      `${GITHUB_API_BASE}/repos/a%20b/x%2Fy/issues`,
+    );
+  });
+});
+
+describe("isAllowedMethod", () => {
+  it("allows only GET", () => {
+    expect(isAllowedMethod("GET")).toBe(true);
+    for (const method of ["POST", "PATCH", "PUT", "DELETE"]) {
+      expect(isAllowedMethod(method)).toBe(false);
+    }
+  });
+});
+
+describe("resolveToken", () => {
+  it("prefers GITHUB_TOKEN over the gh fallback", () => {
+    expect(resolveToken({ GITHUB_TOKEN: "pat" }, () => "gh-token")).toBe("pat");
+  });
+
+  it("falls back to the gh token when GITHUB_TOKEN is unset", () => {
+    expect(resolveToken({}, () => "gh-token")).toBe("gh-token");
+  });
+
+  it("returns null with neither source", () => {
+    expect(resolveToken({}, () => null)).toBeNull();
+  });
+});
+
+describe("proxyGithubRequest", () => {
+  it("rejects non-GET methods without calling the fetcher", async () => {
+    const fetcher = vi.fn();
+    const result = await proxyGithubRequest({
+      path: ["repos", "a", "b", "issues"],
+      method: "POST",
+      token: null,
+      fetcher,
+    });
+
+    expect(result.status).toBe(405);
+    expect(fetcher).not.toHaveBeenCalled();
+  });
+
+  it("forwards GET with the bearer token and accept headers", async () => {
+    const fetcher = vi.fn().mockResolvedValue(new Response("[]", { status: 200 }));
+    await proxyGithubRequest({
+      path: ["repos", "a", "b", "issues"],
+      method: "GET",
+      token: "pat",
+      fetcher,
+    });
+
+    expect(fetcher).toHaveBeenCalledTimes(1);
+    const [url, init] = fetcher.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe(`${GITHUB_API_BASE}/repos/a/b/issues`);
+    expect(init.method).toBe("GET");
+    expect((init.headers as Record<string, string>).authorization).toBe("Bearer pat");
+  });
+
+  it("omits the authorization header for anonymous requests", async () => {
+    const fetcher = vi.fn().mockResolvedValue(new Response("[]", { status: 200 }));
+    await proxyGithubRequest({
+      path: ["repos", "a", "b", "issues"],
+      method: "GET",
+      token: null,
+      fetcher,
+    });
+
+    const [, init] = fetcher.mock.calls[0] as [string, RequestInit];
+    expect((init.headers as Record<string, string>).authorization).toBeUndefined();
+  });
+
+  it("forwards rate-limit headers on success", async () => {
+    const fetcher = vi.fn().mockResolvedValue(
+      new Response("[]", { status: 200, headers: { "x-ratelimit-remaining": "57" } }),
+    );
+    const result = await proxyGithubRequest({
+      path: ["r"],
+      method: "GET",
+      token: null,
+      fetcher,
+    });
+
+    expect(result.status).toBe(200);
+    expect(result.headers["x-ratelimit-remaining"]).toBe("57");
+  });
+
+  it("surfaces a rate-limited upstream response as 429 sync-paused", async () => {
+    const fetcher = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ message: "API rate limit exceeded" }), { status: 403 }),
+    );
+    const result = await proxyGithubRequest({
+      path: ["r"],
+      method: "GET",
+      token: null,
+      fetcher,
+    });
+
+    expect(result.status).toBe(429);
+    expect(result.body).toMatchObject({ error: "sync paused", rate_limited: true });
+  });
+});
