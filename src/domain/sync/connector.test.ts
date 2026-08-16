@@ -65,6 +65,17 @@ describe("GitHubConnector", () => {
     expect(items[1]).toMatchObject({ repo: "meperdonas/meperboard", number: 2, kind: "pull" });
   });
 
+  it("imports an empty dataset without error when the repo has no issues", async () => {
+    const store = makeStore();
+    const fetcher = vi.fn().mockImplementation(() => jsonResponse([]));
+    const connector = new GitHubConnector({ owner: "o", name: "n", fetcher, store });
+
+    const result = await connector.sync();
+
+    expect(result).toEqual({ imported: 0, paused: false });
+    expect(store.bulkUpsert).not.toHaveBeenCalled();
+  });
+
   it("follows pagination across Link next pages", async () => {
     const store = makeStore();
     const fetcher = vi
