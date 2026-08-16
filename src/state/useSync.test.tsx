@@ -1,0 +1,96 @@
+import { act, render, screen, waitFor } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+import { githubItemRepo } from "../data/repositories";
+import { createTestQueryClient, queryWrapper, resetDb } from "./test-utils";
+import { useBoard } from "./useBoard";
+import { useSync } from "./useSync";
+
+function jsonResponse(body: unknown, status = 200): Response {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { "content-type": "application/json" },
+  });
+}
+
+const issuePayloads = [
+  {
+    number: 1,
+    title: "Expenses slice 1",
+    body: "",
+    state: "open",
+    html_url: "https://github.com/meperdonas/meperboard/issues/1",
+    updated_at: "2026-08-01T00:00:00Z",
+    labels: [],
+  },
+  {
+    number: 2,
+    title: "Fix auth",
+    body: null,
+    state: "open",
+    html_url: "https://github.com/meperdonas/meperboard/issues/2",
+    updated_at: "2026-08-01T00:00:00Z",
+    labels: [],
+  },
+];
+
+function BoardProbe({ fetcher }: { fetcher: (url: string) => Promise<Response> }) {
+  const board = useBoard();
+  const sync = useSync({ owner: "meperdonas", name: "meperboard", fetcher });
+  const count = board.data?.columns.reduce((n, c) => n + c.cards.length, 0) ?? 0;
+
+  return (
+    <div>
+      <button data-testid="sync" onClick={() => sync.mutate()}>
+        sync
+      </button>
+      <span data-testid="count">{count}</span>
+      <span data-testid="status">
+        {sync.isPending ? "syncing" : sync.isError ? "error" : "idle"}
+      </span>
+    </div>
+  );
+}
+
+describe("useSync", () => {
+  beforeEach(resetDb);
+
+  it("triggers a read-only import that updates the store and board", async () => {
+    const fetcher = vi.fn<(url: string) => Promise<Response>>();
+    fetcher.mockResolvedValue(jsonResponse(issuePayloads));
+    const client = createTestQueryClient();
+
+    render(<BoardProbe fetcher={fetcher} />, { wrapper: queryWrapper(client) });
+
+    await waitFor(() => expect(screen.getByTestId("count")).toHaveTextContent("0"));
+
+    act(() => screen.getByTestId("sync").click());
+
+    await waitFor(() => expect(screen.getByTestId("count")).toHaveTextContent("2"));
+
+    // The connector hits only the read-only issues endpoint.
+    expect(fetcher).toHaveBeenCalledWith(
+      "https://api.github.com/repos/meperdonas/meperboard/issues?state=all&per_page=100",
+    );
+
+    const stored = await githubItemRepo.getAll();
+    expect(stored).toHaveLength(2);
+    expect(stored[0]).toMatchObject({ number: 1, repo: "meperdonas/meperboard" });
+  });
+
+  it("surfaces an error and leaves the store untouched on failure", async () => {
+    const fetcher = vi.fn<(url: string) => Promise<Response>>();
+    fetcher.mockRejectedValue(new Error("network down"));
+    const client = createTestQueryClient();
+
+    render(<BoardProbe fetcher={fetcher} />, { wrapper: queryWrapper(client) });
+
+    await waitFor(() => expect(screen.getByTestId("count")).toHaveTextContent("0"));
+
+    act(() => screen.getByTestId("sync").click());
+
+    await waitFor(() => expect(screen.getByTestId("status")).toHaveTextContent("error"));
+
+    expect(await githubItemRepo.getAll()).toHaveLength(0);
+  });
+});
