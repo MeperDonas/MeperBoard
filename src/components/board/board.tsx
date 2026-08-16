@@ -9,7 +9,7 @@ import {
   useSensors,
   type DragEndEvent,
 } from "@dnd-kit/core";
-import { GripVertical, MoveLeft, MoveRight } from "lucide-react";
+import { AlertCircle, GripVertical, Inbox, MoveLeft, MoveRight } from "lucide-react";
 import { useState, type ReactNode } from "react";
 
 import { cn } from "../../lib/utils";
@@ -45,10 +45,16 @@ export function Board({ onMoveCard }: BoardProps) {
   const [moves, setMoves] = useState<Record<string, string>>({});
 
   if (isPending) {
-    return <BoardStatus>Loading board…</BoardStatus>;
+    return <BoardSkeleton />;
   }
   if (isError || !data) {
-    return <BoardStatus>Failed to load the board.</BoardStatus>;
+    return (
+      <BoardStatus>
+        <AlertCircle className="h-5 w-5 text-destructive" aria-hidden="true" />
+        <p className="text-sm font-medium text-foreground">Failed to load the board.</p>
+        <p className="text-xs text-muted-foreground">Check your connection and try again.</p>
+      </BoardStatus>
+    );
   }
 
   const effective = applyMoves(data, moves);
@@ -77,9 +83,9 @@ export function Board({ onMoveCard }: BoardProps) {
 
   return (
     <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
-      <div className="p-4" role="region" aria-label="Kanban board">
+      <div className="p-4 md:px-6" role="region" aria-label="Kanban board">
         {totalCards === 0 ? <EmptyState /> : null}
-        <div className="flex gap-4 overflow-x-auto">
+        <div className="flex gap-3 overflow-x-auto pb-2">
           {effective.columns.map((column) => (
             <BoardColumn key={column.id} column={column} onMoveRelative={handleMoveRelative} />
           ))}
@@ -104,13 +110,13 @@ function BoardColumn({
       data-column-id={column.id}
       aria-label={`${column.title} column`}
       className={cn(
-        "flex min-h-48 w-72 shrink-0 flex-col rounded-lg border bg-muted/40 p-2",
-        isOver && "border-primary ring-2 ring-primary/30",
+        "flex min-h-48 w-72 shrink-0 flex-col rounded-xl border bg-card p-2 transition-colors duration-150",
+        isOver && "border-primary/60 bg-primary/5 ring-1 ring-primary/30",
       )}
     >
-      <header className="flex items-center justify-between px-2 py-1">
-        <h2 className="text-sm font-semibold">{column.title}</h2>
-        <span className="rounded-full bg-muted px-2 text-xs tabular-nums text-muted-foreground">
+      <header className="flex items-center justify-between px-2 py-1.5">
+        <h2 className="text-sm font-medium tracking-tight">{column.title}</h2>
+        <span className="min-w-6 rounded-full bg-muted px-2 py-0.5 text-center text-xs tabular-nums text-muted-foreground">
           {column.cards.length}
         </span>
       </header>
@@ -138,8 +144,8 @@ function BoardCard({
     <li
       ref={setNodeRef}
       className={cn(
-        "rounded-md border bg-card p-3 text-card-foreground",
-        isDragging && "opacity-60",
+        "rounded-lg border bg-elevated p-3 text-card-foreground shadow-xs transition-colors duration-150 hover:border-foreground/20",
+        isDragging && "opacity-60 shadow-lg",
       )}
     >
       <div className="flex items-start gap-2">
@@ -149,17 +155,19 @@ function BoardCard({
           {...attributes}
           type="button"
           aria-label={`Drag ${card.title}`}
-          className="mt-0.5 shrink-0 cursor-grab text-muted-foreground transition-colors hover:text-foreground"
+          className="mt-0.5 shrink-0 cursor-grab rounded text-muted-foreground transition-colors duration-150 hover:text-foreground active:cursor-grabbing"
         >
           <GripVertical className="h-4 w-4" aria-hidden="true" />
         </button>
 
         <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-medium">{card.title}</p>
-          <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+          <p className="truncate text-sm font-medium leading-snug" title={card.title}>
+            {card.title}
+          </p>
+          <div className="mt-2 flex flex-wrap items-center gap-1.5">
             <span
               className={cn(
-                "rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
+                "rounded-full px-2 py-0.5 text-xs font-medium",
                 card.source === "local"
                   ? "bg-primary text-primary-foreground"
                   : "bg-muted text-muted-foreground",
@@ -170,7 +178,7 @@ function BoardCard({
             {card.labels.map((label) => (
               <span
                 key={label}
-                className="rounded-full border px-2 py-0.5 text-[10px] text-muted-foreground"
+                className="rounded-full border px-2 py-0.5 text-xs text-muted-foreground"
               >
                 {label}
               </span>
@@ -184,7 +192,7 @@ function BoardCard({
           type="button"
           aria-label={`Move ${card.title} left`}
           onClick={() => onMoveRelative(card.id, -1)}
-          className="rounded p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          className="rounded-md p-1 text-muted-foreground transition-colors duration-150 hover:bg-muted hover:text-foreground"
         >
           <MoveLeft className="h-4 w-4" aria-hidden="true" />
         </button>
@@ -192,7 +200,7 @@ function BoardCard({
           type="button"
           aria-label={`Move ${card.title} right`}
           onClick={() => onMoveRelative(card.id, 1)}
-          className="rounded p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          className="rounded-md p-1 text-muted-foreground transition-colors duration-150 hover:bg-muted hover:text-foreground"
         >
           <MoveRight className="h-4 w-4" aria-hidden="true" />
         </button>
@@ -201,14 +209,44 @@ function BoardCard({
   );
 }
 
+/** Centered status panel used for the board error state. */
 function BoardStatus({ children }: { children: ReactNode }) {
-  return <p className="p-4 text-sm text-muted-foreground">{children}</p>;
+  return (
+    <div className="m-4 flex flex-col items-center gap-1.5 rounded-xl border border-dashed p-8 text-center md:mx-6">
+      {children}
+    </div>
+  );
+}
+
+/** Column-shaped placeholders while the board query resolves. */
+function BoardSkeleton() {
+  return (
+    <div className="p-4 md:px-6" role="status" aria-label="Loading board">
+      <div className="flex gap-3 overflow-hidden">
+        {[0, 1, 2].map((column) => (
+          <div
+            key={column}
+            className="flex w-72 shrink-0 flex-col gap-2 rounded-xl border bg-card p-2"
+          >
+            <div className="mx-2 my-2 h-4 w-24 animate-pulse rounded bg-muted" />
+            {[0, 1, 2].map((item) => (
+              <div key={item} className="h-20 animate-pulse rounded-lg bg-muted/70" />
+            ))}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 }
 
 function EmptyState() {
   return (
-    <div className="mb-4 rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
-      No cards yet. Sync your GitHub issues or add a local card.
+    <div className="mb-4 flex flex-col items-center gap-1.5 rounded-xl border border-dashed p-8 text-center">
+      <Inbox className="h-5 w-5 text-muted-foreground" aria-hidden="true" />
+      <p className="text-sm font-medium text-foreground">No cards yet</p>
+      <p className="text-xs text-muted-foreground">
+        Sync your GitHub issues or add a local card to get started.
+      </p>
     </div>
   );
 }

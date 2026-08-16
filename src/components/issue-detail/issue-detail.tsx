@@ -1,7 +1,9 @@
 "use client";
 
+import { ExternalLink } from "lucide-react";
 import type { ReactNode } from "react";
 
+import { cn } from "../../lib/utils";
 import type { GithubItem, RepoId } from "../../data/types";
 import { useIssueDetail } from "../../state";
 
@@ -31,7 +33,7 @@ export function IssueDetail({ repo, number }: IssueDetailProps) {
     return <DetailStatus>Select an issue to view its details.</DetailStatus>;
   }
   if (isPending) {
-    return <DetailStatus>Loading issue…</DetailStatus>;
+    return <IssueDetailSkeleton />;
   }
   if (isError) {
     return <DetailStatus>Failed to load the issue.</DetailStatus>;
@@ -45,42 +47,57 @@ export function IssueDetail({ repo, number }: IssueDetailProps) {
 
 function IssueDetailView({ item }: { item: GithubItem }) {
   const kind = KIND_LABEL[item.kind] ?? item.kind;
+  const isOpen = item.state === "open";
 
   return (
-    <article className="p-4" role="region" aria-label="Issue details">
-      <header className="mb-4 border-b pb-4">
+    <article
+      className="mx-auto w-full max-w-3xl p-4 md:p-8"
+      role="region"
+      aria-label="Issue details"
+    >
+      <header className="border-b pb-5">
         <div className="flex flex-wrap items-center gap-2">
-          <h2 className="text-xl font-semibold">{item.title}</h2>
-          <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+          <span className="rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
             {kind}
           </span>
+          <span
+            className={cn(
+              "rounded-full border px-2.5 py-0.5 text-xs font-medium",
+              isOpen
+                ? "border-success/30 bg-success/10 text-success"
+                : "text-muted-foreground",
+            )}
+          >
+            {formatState(item.state)}
+          </span>
+          <span className="text-xs tabular-nums text-muted-foreground">#{item.number}</span>
         </div>
-        <div className="mt-2 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-          <span className="rounded-full border px-2 py-0.5 text-xs">{formatState(item.state)}</span>
-          <span className="tabular-nums">#{item.number}</span>
-          {item.html_url && (
-            <a
-              href={item.html_url}
-              target="_blank"
-              rel="noreferrer"
-              className="text-primary hover:underline"
-            >
-              Open on GitHub
-            </a>
-          )}
-        </div>
+        <h2 className="mt-3 text-2xl font-semibold tracking-tight">{item.title}</h2>
+        {item.html_url && (
+          <a
+            href={item.html_url}
+            target="_blank"
+            rel="noreferrer"
+            className="mt-2 inline-flex items-center gap-1 rounded-md text-sm font-medium text-link transition-colors duration-150 hover:underline hover:underline-offset-4"
+          >
+            Open on GitHub
+            <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
+          </a>
+        )}
       </header>
 
-      <section className="mt-4">
-        <h3 className="text-sm font-semibold text-muted-foreground">Labels</h3>
+      <section className="mt-6">
+        <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          Labels
+        </h3>
         {item.labels.length === 0 ? (
-          <p className="mt-1.5 text-sm text-muted-foreground">No labels.</p>
+          <p className="mt-2 text-sm text-muted-foreground">No labels.</p>
         ) : (
-          <ul className="mt-1.5 flex flex-wrap gap-1.5">
+          <ul className="mt-2 flex flex-wrap gap-1.5">
             {item.labels.map((label) => (
               <li
                 key={label}
-                className="rounded-full border px-2 py-0.5 text-xs text-muted-foreground"
+                className="rounded-full border px-2.5 py-0.5 text-xs text-muted-foreground"
               >
                 {label}
               </li>
@@ -89,23 +106,30 @@ function IssueDetailView({ item }: { item: GithubItem }) {
         )}
       </section>
 
-      <section className="mt-4">
-        <h3 className="text-sm font-semibold text-muted-foreground">Description</h3>
+      <section className="mt-6">
+        <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          Description
+        </h3>
         {item.body.trim() === "" ? (
-          <p className="mt-1.5 text-sm text-muted-foreground">No description provided.</p>
+          <p className="mt-2 text-sm text-muted-foreground">No description provided.</p>
         ) : (
-          <p className="mt-1.5 whitespace-pre-wrap text-sm">{item.body}</p>
+          <p className="mt-2 whitespace-pre-wrap text-sm leading-6">{item.body}</p>
         )}
       </section>
 
-      <section className="mt-4">
-        <h3 className="text-sm font-semibold text-muted-foreground">Linked pull requests</h3>
+      <section className="mt-6">
+        <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          Linked pull requests
+        </h3>
         {item.linked_prs.length === 0 ? (
-          <p className="mt-1.5 text-sm text-muted-foreground">No linked pull requests.</p>
+          <p className="mt-2 text-sm text-muted-foreground">No linked pull requests.</p>
         ) : (
-          <ul className="mt-1.5 flex flex-wrap gap-1.5">
+          <ul className="mt-2 flex flex-wrap gap-1.5">
             {item.linked_prs.map((pr) => (
-              <li key={pr} className="rounded-full bg-muted px-2 py-0.5 text-xs tabular-nums">
+              <li
+                key={pr}
+                className="rounded-md bg-muted px-2 py-0.5 text-xs tabular-nums text-muted-foreground"
+              >
                 #{pr}
               </li>
             ))}
@@ -117,7 +141,35 @@ function IssueDetailView({ item }: { item: GithubItem }) {
 }
 
 function DetailStatus({ children }: { children: ReactNode }) {
-  return <p className="p-4 text-sm text-muted-foreground">{children}</p>;
+  return (
+    <p className="mx-auto w-full max-w-3xl p-4 text-sm text-muted-foreground md:p-8">{children}</p>
+  );
+}
+
+/** Header- and body-shaped placeholders while the issue query resolves. */
+function IssueDetailSkeleton() {
+  return (
+    <div
+      className="mx-auto w-full max-w-3xl p-4 md:p-8"
+      role="status"
+      aria-label="Loading issue"
+    >
+      <div className="border-b pb-5">
+        <div className="flex gap-2">
+          <div className="h-5 w-16 animate-pulse rounded-full bg-muted/70" />
+          <div className="h-5 w-16 animate-pulse rounded-full bg-muted/70" />
+        </div>
+        <div className="mt-3 h-7 w-2/3 animate-pulse rounded bg-muted/70" />
+        <div className="mt-2 h-4 w-28 animate-pulse rounded bg-muted/70" />
+      </div>
+      <div className="mt-6 flex flex-col gap-2">
+        <div className="h-3 w-20 animate-pulse rounded bg-muted/70" />
+        <div className="h-4 w-full animate-pulse rounded bg-muted/70" />
+        <div className="h-4 w-5/6 animate-pulse rounded bg-muted/70" />
+        <div className="h-4 w-4/6 animate-pulse rounded bg-muted/70" />
+      </div>
+    </div>
+  );
 }
 
 function formatState(state: string): string {

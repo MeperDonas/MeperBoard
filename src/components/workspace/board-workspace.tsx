@@ -1,5 +1,8 @@
 "use client";
 
+import { RefreshCw } from "lucide-react";
+
+import { cn } from "../../lib/utils";
 import { useMoveCard, useSync } from "../../state";
 import { AppHeader } from "../app-header/app-header";
 import { Board } from "../board";
@@ -19,13 +22,17 @@ export function BoardWorkspace() {
     <div className="min-h-screen">
       <AppHeader />
 
-      <div className="flex items-center gap-3 border-b px-4 py-3">
+      <div className="flex items-center gap-3 border-b px-4 py-3 md:px-6">
         <button
           type="button"
           onClick={() => sync.mutate()}
           disabled={sync.isPending}
-          className="rounded-md bg-primary px-3 py-1.5 text-sm text-primary-foreground transition-colors disabled:opacity-50"
+          className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground transition-colors duration-150 hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-50"
         >
+          <RefreshCw
+            className={cn("h-3.5 w-3.5", sync.isPending && "animate-spin")}
+            aria-hidden="true"
+          />
           {sync.isPending ? "Syncing…" : "Sync"}
         </button>
         <span className="text-xs text-muted-foreground" data-testid="sync-status">
@@ -37,7 +44,7 @@ export function BoardWorkspace() {
         </span>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-[1fr_340px]">
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
         <Board onMoveCard={(move) => moveCard.mutate(move)} />
         <LocalCards />
       </div>
