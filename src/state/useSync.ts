@@ -8,8 +8,8 @@ import { queryKeys } from "./query-keys";
 
 const GITHUB_API_ORIGIN = "https://api.github.com";
 
-/** Default source repository (matches the git origin). */
-export const DEFAULT_REPO = { owner: "MeperDonas", name: "MeperBoard" } as const;
+/** Default source repository — MeperPOS is the board's first tracked repo. */
+export const DEFAULT_REPO = { owner: "MeperDonas", name: "MeperPOS" } as const;
 
 export interface SyncOptions {
   owner?: string;

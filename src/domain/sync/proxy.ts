@@ -15,9 +15,14 @@ import { execSync } from "node:child_process";
 
 export const GITHUB_API_BASE = "https://api.github.com";
 
-/** Build an upstream GitHub API URL from the catch-all route segments. */
-export function buildGithubApiUrl(path: string[]): string {
-  return `${GITHUB_API_BASE}/${path.map((segment) => encodeURIComponent(segment)).join("/")}`;
+/**
+ * Build an upstream GitHub API URL from the catch-all route segments, appending
+ * the original request's query string (e.g. `state=all&per_page=100`) so
+ * pagination and `state=all` survive the proxy hop.
+ */
+export function buildGithubApiUrl(path: string[], query?: string): string {
+  const base = `${GITHUB_API_BASE}/${path.map((segment) => encodeURIComponent(segment)).join("/")}`;
+  return query ? `${base}?${query}` : base;
 }
 
 /** The proxy only ever forwards GET requests. */
@@ -59,6 +64,8 @@ export interface ProxyResult {
 
 export interface ProxyDeps {
   path: string[];
+  /** Raw query string (no leading `?`), forwarded verbatim to upstream. */
+  query?: string;
   method: string;
   token: string | null;
   fetcher: (url: string, init: RequestInit) => Promise<Response>;
@@ -70,6 +77,7 @@ const FORWARD_HEADERS = [
   "x-ratelimit-remaining",
   "x-ratelimit-reset",
   "retry-after",
+  "link",
 ] as const;
 
 /**
@@ -85,7 +93,7 @@ export async function proxyGithubRequest(deps: ProxyDeps): Promise<ProxyResult> 
     return { status: 405, body: { error: "Method not allowed" }, headers: { allow: "GET" } };
   }
 
-  const url = buildGithubApiUrl(deps.path);
+  const url = buildGithubApiUrl(deps.path, deps.query);
   const headers: Record<string, string> = {
     accept: "application/vnd.github+json",
     "x-github-api-version": "2022-11-28",

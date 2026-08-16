@@ -157,4 +157,21 @@ describe("loadCards / loadBoard (IndexedDB)", () => {
     expect(board.columns).toHaveLength(6);
     expect(board.columns[0].cards).toHaveLength(1);
   });
+
+  it("resolves a GitHub card through a column override", async () => {
+    await githubItemRepo.upsert(makeGithubItem({ number: 1, state: "open" }));
+    await githubItemRepo.setColumnOverride("meperdonas/meperboard", 1, "done");
+
+    const cards = await loadCards();
+    const card = cards.find((c) => c.number === 1);
+    expect(card?.columnId).toBe("done");
+  });
+
+  it("keeps the strategy mapping when no override exists", async () => {
+    await githubItemRepo.upsert(makeGithubItem({ number: 1, state: "open" }));
+
+    const cards = await loadCards();
+    const card = cards.find((c) => c.number === 1);
+    expect(card?.columnId).toBe("backlog");
+  });
 });

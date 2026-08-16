@@ -20,6 +20,21 @@ describe("buildGithubApiUrl", () => {
       `${GITHUB_API_BASE}/repos/a%20b/x%2Fy/issues`,
     );
   });
+
+  it("appends the query string when one is provided", () => {
+    expect(buildGithubApiUrl(["repos", "a", "b", "issues"], "state=all&per_page=100")).toBe(
+      `${GITHUB_API_BASE}/repos/a/b/issues?state=all&per_page=100`,
+    );
+  });
+
+  it("omits the query string when it is empty or absent", () => {
+    expect(buildGithubApiUrl(["repos", "a", "b", "issues"], "")).toBe(
+      `${GITHUB_API_BASE}/repos/a/b/issues`,
+    );
+    expect(buildGithubApiUrl(["repos", "a", "b", "issues"])).toBe(
+      `${GITHUB_API_BASE}/repos/a/b/issues`,
+    );
+  });
 });
 
 describe("isAllowedMethod", () => {
@@ -116,5 +131,34 @@ describe("proxyGithubRequest", () => {
 
     expect(result.status).toBe(429);
     expect(result.body).toMatchObject({ error: "sync paused", rate_limited: true });
+  });
+
+  it("forwards the query string to the upstream URL", async () => {
+    const fetcher = vi.fn().mockResolvedValue(new Response("[]", { status: 200 }));
+    await proxyGithubRequest({
+      path: ["repos", "a", "b", "issues"],
+      query: "state=all&per_page=100",
+      method: "GET",
+      token: null,
+      fetcher,
+    });
+
+    const [url] = fetcher.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe(`${GITHUB_API_BASE}/repos/a/b/issues?state=all&per_page=100`);
+  });
+
+  it("forwards the Link pagination header from the upstream response", async () => {
+    const link = `<https://api.github.com/repos/a/b/issues?page=2>; rel="next"`;
+    const fetcher = vi.fn().mockResolvedValue(
+      new Response("[]", { status: 200, headers: { link } }),
+    );
+    const result = await proxyGithubRequest({
+      path: ["r"],
+      method: "GET",
+      token: null,
+      fetcher,
+    });
+
+    expect(result.headers.link).toBe(link);
   });
 });

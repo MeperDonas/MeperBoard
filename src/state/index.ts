@@ -26,3 +26,11 @@ export { useBacklog } from "./useBacklog";
 export { useIssueDetail } from "./useIssueDetail";
 export { DEFAULT_REPO, proxyFetcher, useSync, type SyncOptions } from "./useSync";
 export { useLocalCards, type LocalCardInput, type LocalCardsOptions } from "./useLocalCards";
+export { useMoveCard } from "./useMoveCard";
+export {
+  parseGithubCardId,
+  parseLocalCardId,
+  persistCardMove,
+  type CardMove,
+  type GithubCardRef,
+} from "./move-card";

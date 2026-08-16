@@ -51,7 +51,7 @@ function isGithubItem(item: GithubItem | LocalItem): item is GithubItem {
   return "repo" in item && "number" in item;
 }
 
-function githubToCard(item: GithubItem): Card {
+function githubToCard(item: GithubItem, overrideColumn?: string): Card {
   return {
     id: githubCardId(item.repo, item.number),
     source: "github",
@@ -59,7 +59,7 @@ function githubToCard(item: GithubItem): Card {
     title: item.title,
     body: item.body,
     labels: item.labels,
-    columnId: resolveGithubColumn(item),
+    columnId: overrideColumn ?? resolveGithubColumn(item),
     repo: item.repo,
     number: item.number,
     state: item.state,
@@ -102,11 +102,22 @@ export function resolveGithubColumn(item: GithubItem): string {
 
 /** Read all cards (github + local) as a unified projection. */
 export async function loadCards(): Promise<Card[]> {
-  const [githubItems, localItems] = await Promise.all([
+  const [githubItems, localItems, overrides] = await Promise.all([
     githubItemRepo.getAll(),
     localItemRepo.getAll(),
+    githubItemRepo.getAllOverrides(),
   ]);
-  return [...githubItems.map(toCard), ...localItems.map(toCard)];
+
+  const overrideByKey = new Map(
+    overrides.map((override) => [`${override.repo}:${override.number}`, override.column_id]),
+  );
+
+  return [
+    ...githubItems.map((item) =>
+      githubToCard(item, overrideByKey.get(`${item.repo}:${item.number}`)),
+    ),
+    ...localItems.map(toCard),
+  ];
 }
 
 /** The canonical board layout, used until real columns are seeded. */

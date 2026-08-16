@@ -18,10 +18,12 @@ export async function GET(
   context: { params: Promise<{ path: string[] }> },
 ): Promise<Response> {
   const { path } = await context.params;
+  const query = new URL(request.url).search.slice(1);
   const token = resolveToken(process.env, getGhAuthToken);
 
   const result = await proxyGithubRequest({
     path,
+    query: query || undefined,
     method: request.method,
     token,
     fetcher: (url, init) => fetch(url, init),

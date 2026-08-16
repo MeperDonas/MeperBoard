@@ -1,5 +1,5 @@
 import { db } from "./db";
-import type { Column, Epic, GithubItem, LocalItem, RepoId } from "./types";
+import type { Column, ColumnOverride, Epic, GithubItem, LocalItem, RepoId } from "./types";
 
 /**
  * Repository for the read-only `github_items` mirror and its `column_overrides`.
@@ -35,6 +35,10 @@ export const githubItemRepo = {
   async getColumnOverride(repo: RepoId, number: number): Promise<string | undefined> {
     const override = await db.column_overrides.get([repo, number]);
     return override?.column_id;
+  },
+
+  getAllOverrides(): Promise<ColumnOverride[]> {
+    return db.column_overrides.toArray();
   },
 };
 
