@@ -1,9 +1,12 @@
 /**
  * "X slice N" title heuristic.
  *
- * Parses titles like "Expenses slice 3" into an epic name ("Expenses") and a
- * 1-based slice number (3). Case-insensitive. Titles without the pattern return
- * `null` so they stay top-level and ungrouped.
+ * Parses titles like "Expenses slice 3" and "Expenses module - slice 3: desc"
+ * into an epic name ("Expenses") and a 1-based slice number (3). The optional
+ * "module -" separator is consumed so the epic name stays clean. The pattern is
+ * not end-anchored, so a trailing description after the slice number is fine.
+ * Case-insensitive. Titles without the pattern return `null` so they stay
+ * top-level and ungrouped.
  */
 
 /** A parsed slice title. */
@@ -14,7 +17,7 @@ export interface SliceMatch {
   slice: number;
 }
 
-const SLICE_PATTERN = /^(.+?)\s+slice\s+(\d+)\s*$/i;
+const SLICE_PATTERN = /^(.+?)\s+(?:module\s*[-–—]\s*)?slice\s+(\d+)\b/i;
 
 /**
  * Parse a title using the "X slice N" heuristic.
