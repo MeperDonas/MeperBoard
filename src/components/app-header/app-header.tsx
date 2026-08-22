@@ -8,6 +8,7 @@ import { cn } from "../../lib/utils";
 import { AuthButton } from "./auth-button";
 import { CommandPalette } from "./command-palette";
 import { PalettePicker } from "./palette-picker";
+import { RepoButton } from "./repo-button";
 import { RepoSwitcher } from "./repo-switcher";
 import { ThemeToggle } from "./theme-toggle";
 
@@ -72,6 +73,7 @@ export function AppHeader() {
         })}
 
         <div className="ml-auto flex items-center gap-2">
+          <RepoButton />
           <CommandPalette />
           <AuthButton />
           <PalettePicker />
