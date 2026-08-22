@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useWindowVirtualizer } from "@tanstack/react-virtual";
 import { motion, useReducedMotion } from "framer-motion";
@@ -311,7 +311,7 @@ interface EntryListProps {
 }
 
 const rowClassName =
-  "flex items-center gap-3 rounded-lg border bg-card px-3.5 shadow-xs transition-colors duration-150 hover:border-foreground/20 focus-visible:border-primary/60";
+  "flex items-center gap-3 rounded-lg border bg-card px-3.5 shadow-xs transition-all duration-150 hover:border-primary/50 hover:bg-primary/[0.03] hover:shadow-md hover:shadow-primary/5 focus-visible:border-primary focus-visible:ring-1 focus-visible:ring-primary/40";
 
 function PlainEntryList({
   entries,
@@ -389,41 +389,55 @@ function VirtualEntryList({
   const virtualizer = useWindowVirtualizer({
     count: entries.length,
     estimateSize: (index) =>
-      entries[index].kind === "header" ? BACKLOG_HEADER_HEIGHT : BACKLOG_ROW_HEIGHT,
+      entries[index]?.kind === "header" ? BACKLOG_HEADER_HEIGHT : BACKLOG_ROW_HEIGHT,
     overscan: BACKLOG_OVERSCAN,
-    getItemKey: (index) => entries[index].id,
   });
-  const items = virtualizer.getVirtualItems();
 
-  const padTop = items.length > 0 ? items[0].start : 0;
-  const last = items[items.length - 1];
+  const virtualItems = virtualizer.getVirtualItems();
+  const padTop = virtualItems.length > 0 ? (virtualItems[0]?.start ?? 0) : 0;
+  const last = virtualItems[virtualItems.length - 1];
   const padBottom =
-    last != null ? Math.max(0, virtualizer.getTotalSize() - last.end) : 0;
+    virtualItems.length > 0 && last
+      ? virtualizer.getTotalSize() - last.end
+      : 0;
 
-  let rowIndex = -1;
+  // Map each virtual item to its row index among row entries only.
+  let rowCountSoFar = 0;
+  const rowIndices = entries.map((entry) => {
+    if (entry.kind === "header") return -1;
+    const index = rowCountSoFar;
+    rowCountSoFar += 1;
+    return index;
+  });
+
   return (
-    <div role="list" aria-label="Backlog items" onKeyDown={onKeyDownList} className="flex flex-col">
+    <div
+      role="list"
+      aria-label="Backlog items"
+      onKeyDown={onKeyDownList}
+      className="flex flex-col gap-1.5"
+    >
       {padTop > 0 && <div aria-hidden="true" style={{ height: padTop }} />}
-      {items.map((virtualItem) => {
+      {virtualItems.map((virtualItem) => {
         const entry = entries[virtualItem.index];
+        if (!entry) return null;
         if (entry.kind === "header") {
           return (
             <div
-              key={virtualItem.key}
-              style={{ height: BACKLOG_HEADER_HEIGHT }}
-              className="sticky top-14 z-20 bg-background"
+              key={entry.id}
+              role="presentation"
+              className="sticky top-14 z-20 h-9 bg-background"
             >
               <GroupHeader label={entry.label} count={entry.count} />
             </div>
           );
         }
-        rowIndex += 1;
-        const currentRow = rowIndex;
+        const currentRow = rowIndices[virtualItem.index] ?? -1;
         return (
           <div
-            key={virtualItem.key}
-            ref={(node) => registerRowRef(currentRow, node)}
+            key={entry.id}
             role="listitem"
+            ref={(node) => registerRowRef(currentRow, node)}
             tabIndex={currentRow === focusIndex ? 0 : -1}
             onKeyDown={(event) => onRowKeyDown(event, entry.card)}
             style={{ height: BACKLOG_ROW_HEIGHT }}
@@ -452,9 +466,10 @@ function VirtualEntryList({
 
 function GroupHeader({ label, count }: { label: string; count: number }) {
   return (
-    <div className="flex h-full items-center gap-1.5 px-0.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+    <div className="flex h-full items-center gap-2 px-0.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+      <span className="h-1.5 w-1.5 rounded-full bg-primary shadow-xs" aria-hidden="true" />
       {label}
-      <Badge variant="neutral" className="tabular-nums normal-case">
+      <Badge variant="accent" className="tabular-nums font-mono normal-case">
         {count}
       </Badge>
     </div>

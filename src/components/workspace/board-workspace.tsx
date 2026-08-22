@@ -146,7 +146,7 @@ function LocalCountPill() {
   const { list } = useLocalCards();
   const count = list.data?.length ?? 0;
   return (
-    <Badge variant="neutral" className="tabular-nums normal-case">
+    <Badge variant="accent" className="tabular-nums font-mono normal-case">
       {count}
     </Badge>
   );
@@ -214,16 +214,16 @@ function TotalCount() {
 
   return (
     <div className="ml-auto flex items-center gap-2" data-testid="total-count">
-      <Badge variant="neutral" className="tabular-nums">
-        <CircleDot className="h-3 w-3" aria-hidden="true" />
+      <Badge variant="accent" className="tabular-nums font-mono">
+        <CircleDot className="h-3 w-3 text-primary" aria-hidden="true" />
         {counts.issue} issues
       </Badge>
-      <Badge variant="neutral" className="tabular-nums">
-        <GitPullRequest className="h-3 w-3" aria-hidden="true" />
+      <Badge variant="accent" className="tabular-nums font-mono">
+        <GitPullRequest className="h-3 w-3 text-primary" aria-hidden="true" />
         {counts.pull} PRs
       </Badge>
       {counts.local > 0 && (
-        <Badge variant="primary" className="tabular-nums">
+        <Badge variant="primary" className="tabular-nums font-mono">
           {counts.local} local
         </Badge>
       )}

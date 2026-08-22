@@ -265,6 +265,12 @@
   }
   body {
     @apply bg-background text-foreground antialiased;
+    background-image: radial-gradient(
+      ellipse 80% 50% at 50% -10%,
+      color-mix(in oklab, var(--primary) 12%, transparent),
+      transparent
+    );
+    background-repeat: no-repeat;
   }
   /* One visible, accent-colored focus indicator for every interactive element. */
   *:focus-visible {
@@ -276,7 +282,8 @@
     outline-offset: 3px;
   }
   ::selection {
-    background: color-mix(in oklab, var(--primary) 30%, transparent);
+    background: color-mix(in oklab, var(--primary) 35%, transparent);
+    color: var(--foreground);
   }
 }
 

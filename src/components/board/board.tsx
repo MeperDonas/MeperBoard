@@ -187,10 +187,10 @@ function BoardColumn({
       data-column-id={column.id}
       aria-label={`${column.title} column`}
       className={cn(
-        "relative flex h-full max-h-full w-72 shrink-0 flex-col rounded-xl border bg-card/75 backdrop-blur-xs p-2.5 transition-all duration-200",
+        "relative flex h-full max-h-full w-72 shrink-0 flex-col rounded-xl border border-t-2 border-t-primary/70 bg-card/85 backdrop-blur-xs p-2.5 transition-all duration-200",
         isOver
-          ? "border-primary ring-2 ring-primary/30 bg-primary/[0.04] shadow-lg shadow-primary/5"
-          : "border-border hover:border-foreground/15",
+          ? "border-primary ring-2 ring-primary/40 bg-primary/[0.06] shadow-xl shadow-primary/15"
+          : "border-border hover:border-primary/40 hover:shadow-md hover:shadow-primary/5",
       )}
     >
       {pulse != null && pulse.columnId === column.id && !reduceMotion && (
@@ -200,22 +200,23 @@ function BoardColumn({
           initial={{ opacity: 0.9, scale: 0.99 }}
           animate={{ opacity: 0, scale: 1 }}
           transition={{ duration: LANDING_PULSE_MS / 1000, ease: "easeOut" }}
-          className="pointer-events-none absolute inset-0 z-10 rounded-xl ring-2 ring-primary shadow-lg shadow-primary/20"
+          className="pointer-events-none absolute inset-0 z-10 rounded-xl ring-2 ring-primary shadow-lg shadow-primary/30"
         />
       )}
-      <header className="flex items-center justify-between px-2 py-1.5">
+      <header className="flex items-center justify-between px-2 py-1.5 border-b border-border/50 pb-2 mb-1">
         <div className="flex items-center gap-2">
-          <h2 className="text-sm font-semibold tracking-tight">{column.title}</h2>
+          <span className="h-2 w-2 rounded-full bg-primary shadow-xs ring-1 ring-primary/40" aria-hidden="true" />
+          <h2 className="text-sm font-semibold tracking-tight text-foreground">{column.title}</h2>
         </div>
         <span
           title={overWip ? `More than ${MAX_WIP_PER_COLUMN} cards in this column` : undefined}
           className={cn(
-            "inline-flex items-center gap-1 min-w-6 rounded-full px-2 py-0.5 text-center text-xs tabular-nums transition-colors duration-150",
+            "inline-flex items-center gap-1 min-w-6 rounded-full px-2 py-0.5 text-center font-mono text-xs tabular-nums transition-colors duration-150",
             overWip
               ? "border border-warning/30 bg-warning/10 text-warning"
               : isOver
-                ? "bg-primary/20 text-primary font-medium"
-                : "bg-muted text-muted-foreground",
+                ? "bg-primary text-primary-foreground font-semibold"
+                : "border border-primary/20 bg-primary/10 text-primary font-medium",
           )}
         >
           {overWip && (
@@ -282,8 +283,8 @@ function BoardCard({
       {...attributes}
       className={cn(
         "group relative cursor-grab rounded-lg border bg-elevated p-3 text-card-foreground shadow-xs transition-all duration-200 ease-out select-none active:cursor-grabbing",
-        "hover:-translate-y-0.5 hover:shadow-md hover:border-primary/40 hover:bg-elevated/90",
-        isDragging && "opacity-25 border-dashed border-primary/60 scale-[0.98] shadow-inner",
+        "hover:-translate-y-0.5 hover:shadow-lg hover:shadow-primary/5 hover:border-primary/50 hover:bg-elevated/90",
+        isDragging && "opacity-25 border-dashed border-primary scale-[0.98] shadow-inner",
       )}
     >
       <motion.div
@@ -294,13 +295,16 @@ function BoardCard({
         <div className="flex items-start gap-2.5">
           <span
             aria-hidden="true"
-            className="mt-0.5 shrink-0 text-muted-foreground/60 transition-colors duration-150 group-hover:text-primary"
+            className="mt-0.5 shrink-0 text-muted-foreground/50 transition-colors duration-150 group-hover:text-primary"
           >
             <GripVertical className="h-4 w-4" />
           </span>
 
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-medium leading-snug tracking-tight text-foreground transition-colors group-hover:text-primary" title={card.title}>
+            <p
+              className="text-sm font-medium leading-snug tracking-tight text-foreground transition-colors duration-150 group-hover:text-primary"
+              title={card.title}
+            >
               {card.title}
             </p>
             <div className="mt-2 flex w-full items-center gap-2">
@@ -309,7 +313,7 @@ function BoardCard({
             {card.labels.length > 0 && (
               <div className="mt-2 flex flex-wrap items-center gap-1">
                 {card.labels.map((label) => (
-                  <Badge key={label} variant="outline" className="transition-colors group-hover:border-primary/30">
+                  <Badge key={label} variant="outline" className="transition-colors group-hover:border-primary/40 group-hover:text-primary">
                     {label}
                   </Badge>
                 ))}
@@ -332,7 +336,7 @@ function GhostCard({ card, reduceMotion }: { card: Card; reduceMotion: boolean }
         rotate: reduceMotion ? 0 : 2.5,
       }}
       transition={reduceMotion ? { duration: 0 } : SPRING_GHOST_LIFT}
-      className="w-72 cursor-grabbing rounded-lg border-2 border-primary/60 bg-elevated/95 p-3.5 text-card-foreground shadow-2xl backdrop-blur-xl ring-2 ring-primary/40"
+      className="w-72 cursor-grabbing rounded-lg border-2 border-primary bg-elevated/95 p-3.5 text-card-foreground shadow-2xl shadow-primary/25 backdrop-blur-xl ring-2 ring-primary/50"
     >
       <div className="flex items-start gap-2.5">
         <span className="mt-0.5 shrink-0 text-primary">
@@ -346,7 +350,7 @@ function GhostCard({ card, reduceMotion }: { card: Card; reduceMotion: boolean }
           {card.labels.length > 0 && (
             <div className="mt-2 flex flex-wrap items-center gap-1">
               {card.labels.map((label) => (
-                <Badge key={label} variant="outline" className="border-primary/40">
+                <Badge key={label} variant="accent">
                   {label}
                 </Badge>
               ))}

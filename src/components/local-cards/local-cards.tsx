@@ -65,7 +65,7 @@ export function LocalCards() {
       <form
         onSubmit={handleSubmit}
         aria-label="New local card"
-        className="mb-4 flex flex-col gap-2.5 rounded-xl border bg-card p-4 shadow-xs"
+        className="mb-4 flex flex-col gap-2.5 rounded-xl border border-primary/20 bg-card p-4 shadow-sm transition-colors hover:border-primary/40"
       >
         <Input
           value={title}

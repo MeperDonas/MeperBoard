@@ -6,12 +6,13 @@ import { cn } from "../../lib/utils";
  * The single shared badge/tag primitive (UX round 2). Variants are driven by
  * the Linear design tokens in globals.css — never hardcode colors here.
  */
-export type BadgeVariant = "neutral" | "primary" | "outline" | "success" | "warning";
+export type BadgeVariant = "neutral" | "primary" | "accent" | "outline" | "success" | "warning";
 
 const VARIANTS: Record<BadgeVariant, string> = {
   neutral: "bg-muted text-muted-foreground",
   primary: "bg-primary text-primary-foreground",
-  outline: "border text-muted-foreground",
+  accent: "border border-primary/30 bg-primary/10 text-primary font-medium",
+  outline: "border border-primary/20 bg-primary/[0.03] text-foreground/90 transition-colors",
   success: "border-success/30 bg-success/10 text-success",
   warning: "border-warning/30 bg-warning/10 text-warning",
 };

@@ -46,7 +46,12 @@ export function CardSourceKindBadge({ type }: { type: CardMetaInfo["type"] }) {
   const meta = KIND_META[type];
   if (!meta) return null;
   const { Icon } = meta;
-  return <Icon className="h-3 w-3 shrink-0 text-muted-foreground" aria-hidden="true" />;
+  return (
+    <Icon
+      className="h-3 w-3 shrink-0 text-primary/70 transition-colors group-hover:text-primary"
+      aria-hidden="true"
+    />
+  );
 }
 
 /**
@@ -56,7 +61,9 @@ export function CardSourceKindBadge({ type }: { type: CardMetaInfo["type"] }) {
 export function CardNumberText({ number }: { number: number | null }) {
   if (number == null) return null;
   return (
-    <span className="shrink-0 font-mono text-xs tabular-nums text-muted-foreground">#{number}</span>
+    <span className="shrink-0 font-mono text-xs tabular-nums text-primary/80 transition-colors group-hover:text-primary">
+      #{number}
+    </span>
   );
 }
 
