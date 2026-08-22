@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 import { cn } from "../../lib/utils";
+import { PalettePicker } from "./palette-picker";
 import { ThemeToggle } from "./theme-toggle";
 
 const NAV_ITEMS = [
@@ -17,9 +18,8 @@ const NAV_ITEMS = [
 ];
 
 /**
- * App shell header: brand, primary navigation with a clear active state, and
- * the theme toggle. Kept as a client component so `next/link` client-side
- * navigation and `usePathname` work on every page.
+ * App shell header: brand, primary navigation with a clear active state,
+ * dynamic palette picker, and the theme toggle.
  */
 export function AppHeader() {
   // usePathname() returns null outside a Next.js router context (e.g. tests).
@@ -66,7 +66,8 @@ export function AppHeader() {
           );
         })}
 
-        <div className="ml-auto">
+        <div className="ml-auto flex items-center gap-2">
+          <PalettePicker />
           <ThemeToggle />
         </div>
       </nav>

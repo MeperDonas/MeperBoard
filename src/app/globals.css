@@ -1,15 +1,15 @@
-@import "tailwindcss";
+﻿@import "tailwindcss";
 @import "tw-animate-css";
 
 @custom-variant dark (&:is(.dark *));
 
 /*
- * MeperBoard design tokens — Kinetic Bento visual language.
+ * MeperBoard design tokens — Kinetic Bento visual language with Palette Engine.
  *
  * Obsidian Charcoal palette: pure deep neutral canvas (#111114) with zero
  * blue saturation, a stepped surface ladder (#18181c -> #222228), crisp
  * hairline borders (#30303a), and dual typography (Geist UI + JetBrains Mono).
- * The primary accent token is fully decoupled for instant palette switching.
+ * The primary accent is dynamic and driven by [data-accent] attributes.
  */
 @theme inline {
   --color-background: var(--background);
@@ -50,7 +50,7 @@
   --shadow-lg: var(--elevation-3);
 }
 
-/* Light theme (Kinetic Bento Light: clean, high-contrast surface) */
+/* Light base surfaces */
 :root {
   color-scheme: light;
   --radius: 0.75rem;
@@ -61,11 +61,6 @@
   --elevated: #ffffff;
   --popover: #ffffff;
   --popover-foreground: #131b2e;
-  --primary: #65a30d;
-  --primary-foreground: #ffffff;
-  --primary-hover: #4d7c0f;
-  --primary-soft: #f4fce3;
-  --link: #4d7c0f;
   --secondary: #f1eff8;
   --secondary-foreground: #131b2e;
   --muted: #f1eff8;
@@ -77,13 +72,20 @@
   --warning: #d97706;
   --border: #e2e0ed;
   --input: #e2e0ed;
-  --ring: #65a30d;
   --elevation-1: 0 1px 2px 0 rgb(0 0 0 / 0.05);
   --elevation-2: 0 4px 12px -2px rgb(0 0 0 / 0.08);
   --elevation-3: 0 12px 28px -8px rgb(0 0 0 / 0.14);
+
+  /* Default Light Accent: Cyber Lime */
+  --primary: #65a30d;
+  --primary-foreground: #ffffff;
+  --primary-hover: #4d7c0f;
+  --primary-soft: #f4fce3;
+  --link: #4d7c0f;
+  --ring: #65a30d;
 }
 
-/* Dark theme (Kinetic Bento Obsidian Charcoal: pure deep neutral, 0 blue bias) */
+/* Dark base surfaces (Obsidian Charcoal) */
 .dark {
   color-scheme: dark;
   --background: #111114;
@@ -93,11 +95,6 @@
   --elevated: #222228;
   --popover: #18181c;
   --popover-foreground: #f2f2f5;
-  --primary: #a3e635;
-  --primary-foreground: #111114;
-  --primary-hover: #bef264;
-  --primary-soft: #233110;
-  --link: #a3e635;
   --secondary: #222228;
   --secondary-foreground: #f2f2f5;
   --muted: #222228;
@@ -109,10 +106,157 @@
   --warning: #f59e0b;
   --border: #30303a;
   --input: #30303a;
-  --ring: #a3e635;
   --elevation-1: 0 1px 2px 0 rgb(0 0 0 / 0.6), inset 0 1px 0 0 rgb(255 255 255 / 0.04);
   --elevation-2: 0 4px 16px -2px rgb(0 0 0 / 0.7), inset 0 1px 0 0 rgb(255 255 255 / 0.05);
   --elevation-3: 0 12px 32px -8px rgb(0 0 0 / 0.85);
+
+  /* Default Dark Accent: Cyber Lime */
+  --primary: #a3e635;
+  --primary-foreground: #111114;
+  --primary-hover: #bef264;
+  --primary-soft: #233110;
+  --link: #a3e635;
+  --ring: #a3e635;
+}
+
+/* Accent Palettes — Light */
+:root[data-accent="cyber-lime"] {
+  --primary: #65a30d;
+  --primary-foreground: #ffffff;
+  --primary-hover: #4d7c0f;
+  --primary-soft: #f4fce3;
+  --link: #4d7c0f;
+  --ring: #65a30d;
+}
+:root[data-accent="terracotta"] {
+  --primary: #c25e36;
+  --primary-foreground: #ffffff;
+  --primary-hover: #a84d28;
+  --primary-soft: #faece5;
+  --link: #c25e36;
+  --ring: #c25e36;
+}
+:root[data-accent="jade-teal"] {
+  --primary: #0d9488;
+  --primary-foreground: #ffffff;
+  --primary-hover: #0f766e;
+  --primary-soft: #f0fdfa;
+  --link: #0d9488;
+  --ring: #0d9488;
+}
+:root[data-accent="cyber-amber"] {
+  --primary: #d97706;
+  --primary-foreground: #ffffff;
+  --primary-hover: #b45309;
+  --primary-soft: #fffbeb;
+  --link: #d97706;
+  --ring: #d97706;
+}
+:root[data-accent="tokyo-night"] {
+  --primary: #5e6ad2;
+  --primary-foreground: #ffffff;
+  --primary-hover: #4d58ba;
+  --primary-soft: #f0f2fe;
+  --link: #5e6ad2;
+  --ring: #5e6ad2;
+}
+:root[data-accent="rose-pine"] {
+  --primary: #e11d48;
+  --primary-foreground: #ffffff;
+  --primary-hover: #be123c;
+  --primary-soft: #fff1f2;
+  --link: #e11d48;
+  --ring: #e11d48;
+}
+:root[data-accent="crimson-coral"] {
+  --primary: #d0453f;
+  --primary-foreground: #ffffff;
+  --primary-hover: #b83630;
+  --primary-soft: #fdf2f2;
+  --link: #d0453f;
+  --ring: #d0453f;
+}
+:root[data-accent="monochrome"] {
+  --primary: #18181b;
+  --primary-foreground: #ffffff;
+  --primary-hover: #27272a;
+  --primary-soft: #f4f4f5;
+  --link: #18181b;
+  --ring: #18181b;
+}
+
+/* Accent Palettes — Dark */
+.dark[data-accent="cyber-lime"],
+.dark [data-accent="cyber-lime"] {
+  --primary: #a3e635;
+  --primary-foreground: #111114;
+  --primary-hover: #bef264;
+  --primary-soft: #233110;
+  --link: #a3e635;
+  --ring: #a3e635;
+}
+.dark[data-accent="terracotta"],
+.dark [data-accent="terracotta"] {
+  --primary: #c25e36;
+  --primary-foreground: #ffffff;
+  --primary-hover: #db7348;
+  --primary-soft: #2c1d18;
+  --link: #db7348;
+  --ring: #c25e36;
+}
+.dark[data-accent="jade-teal"],
+.dark [data-accent="jade-teal"] {
+  --primary: #14b8a6;
+  --primary-foreground: #111114;
+  --primary-hover: #2dd4bf;
+  --primary-soft: #133330;
+  --link: #14b8a6;
+  --ring: #14b8a6;
+}
+.dark[data-accent="cyber-amber"],
+.dark [data-accent="cyber-amber"] {
+  --primary: #f59e0b;
+  --primary-foreground: #111114;
+  --primary-hover: #fbbf24;
+  --primary-soft: #382509;
+  --link: #f59e0b;
+  --ring: #f59e0b;
+}
+.dark[data-accent="tokyo-night"],
+.dark [data-accent="tokyo-night"] {
+  --primary: #828fff;
+  --primary-foreground: #0e0e12;
+  --primary-hover: #9da8ff;
+  --primary-soft: #232238;
+  --link: #828fff;
+  --ring: #828fff;
+}
+.dark[data-accent="rose-pine"],
+.dark [data-accent="rose-pine"] {
+  --primary: #fb7185;
+  --primary-foreground: #111114;
+  --primary-hover: #fda4af;
+  --primary-soft: #38151d;
+  --link: #fb7185;
+  --ring: #fb7185;
+}
+.dark[data-accent="crimson-coral"],
+.dark [data-accent="crimson-coral"] {
+  --primary: #f43f5e;
+  --primary-foreground: #ffffff;
+  --primary-hover: #fb7185;
+  --primary-soft: #3b141d;
+  --link: #f43f5e;
+  --ring: #f43f5e;
+}
+.dark[data-accent="monochrome"],
+.dark [data-accent="monochrome"] {
+  --primary: #f4f4f5;
+  --primary-foreground: #18181b;
+  --primary-hover: #ffffff;
+  --primary-soft: #27272a;
+  --link: #f4f4f5;
+  --ring: #f4f4f5;
 }
 
 @layer base {

@@ -25,7 +25,7 @@ export const metadata: Metadata = {
  * prefers-color-scheme, defaulting to dark. Keep in sync with THEME_STORAGE_KEY
  * in components/app-header/theme-toggle.tsx.
  */
-const themeInitScript = `(function(){try{var t=localStorage.getItem("meperboard-theme");if(t!=="light"&&t!=="dark"){t=window.matchMedia("(prefers-color-scheme: light)").matches?"light":"dark";}}catch(e){t="dark";}document.documentElement.classList.toggle("dark",t==="dark");})();`;
+const themeInitScript = `(function(){try{var t=localStorage.getItem("meperboard-theme");if(t!=="light"&&t!=="dark"){t=window.matchMedia("(prefers-color-scheme: light)").matches?"light":"dark";}document.documentElement.classList.toggle("dark",t==="dark");var a=localStorage.getItem("meperboard-accent")||"cyber-lime";document.documentElement.dataset.accent=a;}catch(e){document.documentElement.classList.add("dark");document.documentElement.dataset.accent="cyber-lime";}})();`;
 
 export default function RootLayout({
   children,
