@@ -105,6 +105,15 @@ describe("sortCards", () => {
     ]);
   });
 
+  it("sorts by issue number ascending and descending", () => {
+    expect(sortCards(cards, { field: "number" }).map((c) => c.number)).toEqual([1, 2, null]);
+    expect(sortCards(cards, { field: "number", direction: "desc" }).map((c) => c.number)).toEqual([
+      null,
+      2,
+      1,
+    ]);
+  });
+
   it("returns a new array and does not mutate the input", () => {
     const input = [...cards];
     sortCards(cards, { field: "title" });

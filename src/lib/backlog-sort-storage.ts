@@ -10,7 +10,7 @@ import type { BacklogSort } from "../state/cards";
 
 export const BACKLOG_SORT_STORAGE_KEY = "meperboard-backlog-sort";
 
-const SORT_FIELDS = new Set(["title", "created", "updated"]);
+const SORT_FIELDS = new Set(["title", "created", "updated", "number", "state", "column"]);
 const SORT_DIRECTIONS = new Set(["asc", "desc"]);
 
 /** Load the stored sort, or `null` when absent/invalid/unavailable. */

@@ -180,7 +180,7 @@ export function filterCards(cards: Card[], filters: BacklogFilters = {}): Card[]
   });
 }
 
-export type SortField = "title" | "created" | "updated";
+export type SortField = "updated" | "created" | "number" | "title" | "state" | "column";
 export type SortDirection = "asc" | "desc";
 
 export interface BacklogSort {
@@ -196,10 +196,25 @@ export function sortCards(cards: Card[], sort?: BacklogSort): Card[] {
 }
 
 function compareByField(a: Card, b: Card, field: SortField): number {
-  const valueA = field === "title" ? a.title : field === "created" ? a.createdAt : a.updatedAt;
-  const valueB = field === "title" ? b.title : field === "created" ? b.createdAt : b.updatedAt;
-  const byValue = compareStrings(valueA, valueB);
-  return byValue !== 0 ? byValue : compareStrings(a.id, b.id);
+  if (field === "number") {
+    const numA = a.number ?? Infinity;
+    const numB = b.number ?? Infinity;
+    if (numA !== numB) return numA - numB;
+  } else if (field === "state") {
+    const stateA = a.state ?? "open";
+    const stateB = b.state ?? "open";
+    const byState = compareStrings(stateA, stateB);
+    if (byState !== 0) return byState;
+  } else if (field === "column") {
+    const byCol = compareStrings(a.columnId, b.columnId);
+    if (byCol !== 0) return byCol;
+  } else {
+    const valueA = field === "title" ? a.title : field === "created" ? a.createdAt : a.updatedAt;
+    const valueB = field === "title" ? b.title : field === "created" ? b.createdAt : b.updatedAt;
+    const byValue = compareStrings(valueA, valueB);
+    if (byValue !== 0) return byValue;
+  }
+  return compareStrings(a.id, b.id);
 }
 
 function compareStrings(a: string, b: string): number {

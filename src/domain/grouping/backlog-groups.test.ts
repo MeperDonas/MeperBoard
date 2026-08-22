@@ -68,6 +68,22 @@ describe("groupCards", () => {
     expect(groups[0].label).toBe("Github");
   });
 
+  it("groups by column in fixed workflow order and labels each bucket", () => {
+    const groups = groupCards(
+      [
+        card({ id: "d1", columnId: "done" }),
+        card({ id: "t1", columnId: "todo" }),
+        card({ id: "r1", columnId: "in-review" }),
+      ],
+      "column",
+    );
+    expect(groups.map((g) => [g.key, g.label, g.cards.length])).toEqual([
+      ["todo", "To Do", 1],
+      ["in-review", "In Review", 1],
+      ["done", "Done", 1],
+    ]);
+  });
+
   it("preserves input order within groups (caller sorts first)", () => {
     const groups = groupCards([card({ id: "z" }), card({ id: "a" })], "type");
     expect(groups[0].cards.map((c) => c.id)).toEqual(["z", "a"]);

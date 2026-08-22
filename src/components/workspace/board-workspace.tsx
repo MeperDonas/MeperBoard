@@ -27,6 +27,8 @@ import { Button } from "../ui/button";
 import { Board } from "../board";
 import { LocalCards } from "../local-cards";
 
+import { SyncControl } from "./sync-control";
+
 /** Desktop width of the Local Cards rail (matches the round-1 grid column). */
 const RAIL_WIDTH = 340;
 
@@ -38,24 +40,17 @@ const RAIL_WIDTH = 340;
  *
  * UX overhaul: constrained viewport height (no global scroll), secondary sync
  * button with icon state feedback, accessible rail toggle with Button primitive,
- * and opacity fade on rail collapse.
+ * and unified Badge chips for issue/PR counts.
  */
 export function BoardWorkspace() {
-  const sync = useSync();
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState<boolean>(() => loadLocalCardsCollapsed());
 
-  // Restore after mount (never during SSR render) — same pattern as the
-  // persisted backlog sort.
   useEffect(() => {
-    setCollapsed(loadLocalCardsCollapsed());
-  }, []);
+    saveLocalCardsCollapsed(collapsed);
+  }, [collapsed]);
 
   function toggle() {
-    setCollapsed((current) => {
-      const next = !current;
-      saveLocalCardsCollapsed(next);
-      return next;
-    });
+    setCollapsed((prev) => !prev);
   }
 
   return (
@@ -63,42 +58,7 @@ export function BoardWorkspace() {
       <AppHeader />
 
       <div className="flex flex-wrap items-center gap-3 border-b px-4 py-2.5 md:px-6">
-        <Button
-          type="button"
-          variant="secondary"
-          size="sm"
-          onClick={() => sync.mutate()}
-          loading={sync.isPending}
-        >
-          <RefreshCw
-            className={cn("h-3.5 w-3.5", sync.isPending && "animate-spin")}
-            aria-hidden="true"
-          />
-          {sync.isPending ? "Syncing…" : "Sync"}
-        </Button>
-        <span
-          className="inline-flex items-center gap-1.5 text-xs"
-          data-testid="sync-status"
-        >
-          {sync.isError ? (
-            <>
-              <AlertCircle className="h-3.5 w-3.5 text-destructive" aria-hidden="true" />
-              <span className="font-medium text-destructive">Sync failed</span>
-            </>
-          ) : sync.isSuccess ? (
-            <>
-              <CheckCircle className="h-3.5 w-3.5 text-success" aria-hidden="true" />
-              <span className="font-medium text-success">
-                Imported {sync.data.imported} item{sync.data.imported === 1 ? "" : "s"}
-              </span>
-            </>
-          ) : (
-            <>
-              <Clock className="h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />
-              <span className="text-muted-foreground">Not synced yet</span>
-            </>
-          )}
-        </span>
+        <SyncControl />
         <TotalCount />
         <RailToggle collapsed={collapsed} onToggle={toggle} />
       </div>

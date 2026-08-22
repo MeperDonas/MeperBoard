@@ -8,12 +8,13 @@
  */
 
 /** The group-by dimensions offered by the backlog UI. */
-export type BacklogGroupKey = "none" | "type" | "state" | "source";
+export type BacklogGroupKey = "none" | "column" | "state" | "type" | "source";
 
 export interface BacklogGroupable {
   type: string;
   source: string;
   state: string | null;
+  columnId?: string;
 }
 
 export interface BacklogGroup {
@@ -43,8 +44,19 @@ const SOURCE_ORDER = ["github", "local"] as const;
 /** Fixed state ordering; unknown states keep first-seen order after these. */
 const STATE_ORDER = ["open", "closed"] as const;
 
-function labelFor(kind: "type" | "state" | "source", value: string): string {
+const COLUMN_ORDER = ["todo", "doing", "in-review", "draft", "backlog", "done"] as const;
+const COLUMN_LABEL: Record<string, string> = {
+  todo: "To Do",
+  doing: "Doing",
+  "in-review": "In Review",
+  draft: "Draft",
+  backlog: "Backlog",
+  done: "Done",
+};
+
+function labelFor(kind: "type" | "state" | "source" | "column", value: string): string {
   if (kind === "type") return TYPE_LABEL[value] ?? value;
+  if (kind === "column") return COLUMN_LABEL[value] ?? value.charAt(0).toUpperCase() + value.slice(1);
   return value.charAt(0).toUpperCase() + value.slice(1);
 }
 
@@ -64,7 +76,13 @@ export function groupCards<T extends BacklogGroupable>(
   const buckets = new Map<string, T[]>();
   for (const card of cards) {
     const value =
-      groupBy === "type" ? card.type : groupBy === "source" ? card.source : card.state ?? "";
+      groupBy === "type"
+        ? card.type
+        : groupBy === "source"
+          ? card.source
+          : groupBy === "column"
+            ? card.columnId ?? "unknown"
+            : card.state ?? "";
     const bucket = buckets.get(value);
     if (bucket) bucket.push(card);
     else buckets.set(value, [card]);
@@ -72,7 +90,13 @@ export function groupCards<T extends BacklogGroupable>(
 
   // Fixed prefix order first, then any unseen values in first-seen order.
   const preferred =
-    groupBy === "type" ? TYPE_ORDER : groupBy === "source" ? SOURCE_ORDER : STATE_ORDER;
+    groupBy === "type"
+      ? TYPE_ORDER
+      : groupBy === "source"
+        ? SOURCE_ORDER
+        : groupBy === "column"
+          ? COLUMN_ORDER
+          : STATE_ORDER;
   const seen = new Set(buckets.keys());
   const orderedKeys = [
     ...preferred.filter((value) => seen.has(value)),

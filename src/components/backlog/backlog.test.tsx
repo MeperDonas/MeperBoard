@@ -99,7 +99,7 @@ describe("Backlog", () => {
     expect(titles()).toEqual(["alpha", "bravo", "charlie"]);
 
     // Sort by created ascending.
-    changeSelect("Sort by", "Created");
+    changeSelect("Sort by", "Date created");
     await waitFor(() => expect(titles()).toEqual(["bravo", "charlie", "alpha"]));
 
     // Toggle to descending.
@@ -201,5 +201,12 @@ describe("Backlog pagination", () => {
 
     await waitFor(() => expect(backlogItems()).toHaveLength(30));
     expect(screen.getByTestId("backlog-pager")).toHaveTextContent("Page 1 of 1");
+  });
+
+  it("renders the sync control with accessible label in the backlog toolbar", async () => {
+    renderBacklog();
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "Sync with GitHub" })).toBeInTheDocument(),
+    );
   });
 });

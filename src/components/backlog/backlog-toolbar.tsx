@@ -1,8 +1,9 @@
-﻿import { ArrowDown, ArrowUp, Search } from "lucide-react";
+import { ArrowDown, ArrowUp, Search } from "lucide-react";
 import type { BacklogGroupKey } from "../../domain/grouping";
 import type { CardType, SortDirection, SortField } from "../../state";
 import { Input } from "../ui/input";
 import { Select } from "../ui/select";
+import { SyncControl } from "../workspace/sync-control";
 
 export type TypeFilter = CardType | "all";
 
@@ -14,15 +15,19 @@ export const TYPE_OPTIONS: { value: TypeFilter; label: string }[] = [
 ];
 
 export const SORT_FIELD_OPTIONS: { value: SortField; label: string }[] = [
+  { value: "updated", label: "Recently updated" },
+  { value: "created", label: "Date created" },
+  { value: "number", label: "Issue / PR #" },
   { value: "title", label: "Title" },
-  { value: "created", label: "Created" },
-  { value: "updated", label: "Updated" },
+  { value: "state", label: "State" },
+  { value: "column", label: "Column" },
 ];
 
 export const GROUP_OPTIONS: { value: BacklogGroupKey; label: string }[] = [
-  { value: "none", label: "None" },
-  { value: "type", label: "Type" },
+  { value: "none", label: "No grouping" },
+  { value: "column", label: "Board column" },
   { value: "state", label: "State" },
+  { value: "type", label: "Type" },
   { value: "source", label: "Source" },
 ];
 
@@ -95,7 +100,7 @@ export function BacklogToolbar({
           options={labelOptions}
           value={labelFilter}
           onValueChange={onLabelFilterChange}
-          className="w-44"
+          className="w-40"
         />
       </div>
 
@@ -106,35 +111,40 @@ export function BacklogToolbar({
           options={GROUP_OPTIONS}
           value={groupBy}
           onValueChange={(next) => onGroupByChange(next as BacklogGroupKey)}
-          className="w-32"
+          className="w-36"
         />
       </div>
 
       <div className="flex flex-col gap-1.5 text-xs font-medium text-muted-foreground">
         <span>Sort by</span>
-        <Select
-          aria-label="Sort by"
-          options={SORT_FIELD_OPTIONS}
-          value={sortField}
-          onValueChange={(next) => onSortFieldChange(next as SortField)}
-          className="w-28"
-        />
+        <div className="flex items-center gap-1">
+          <Select
+            aria-label="Sort by"
+            options={SORT_FIELD_OPTIONS}
+            value={sortField}
+            onValueChange={(next) => onSortFieldChange(next as SortField)}
+            className="w-36"
+          />
+          <button
+            type="button"
+            onClick={onToggleSortDir}
+            aria-label="Toggle sort direction"
+            aria-pressed={sortDir === "desc"}
+            title={`Sort ${sortField} ${sortDir === "asc" ? "ascending" : "descending"}. Click to reverse.`}
+            className="rounded-lg border bg-card p-2 text-foreground shadow-xs transition-colors duration-150 hover:border-primary/40 hover:text-primary hover:bg-muted"
+          >
+            {sortDir === "asc" ? (
+              <ArrowUp className="h-4 w-4" aria-hidden="true" />
+            ) : (
+              <ArrowDown className="h-4 w-4" aria-hidden="true" />
+            )}
+          </button>
+        </div>
       </div>
 
-      <button
-        type="button"
-        onClick={onToggleSortDir}
-        aria-label="Toggle sort direction"
-        aria-pressed={sortDir === "desc"}
-        title={`Sort ${sortField} ${sortDir === "asc" ? "ascending" : "descending"}. Click to reverse.`}
-        className="rounded-lg border bg-card p-2 text-foreground shadow-xs transition-colors duration-150 hover:bg-muted"
-      >
-        {sortDir === "asc" ? (
-          <ArrowUp className="h-4 w-4" aria-hidden="true" />
-        ) : (
-          <ArrowDown className="h-4 w-4" aria-hidden="true" />
-        )}
-      </button>
+      <div className="ml-auto flex items-center pb-0.5">
+        <SyncControl />
+      </div>
     </div>
   );
 }
