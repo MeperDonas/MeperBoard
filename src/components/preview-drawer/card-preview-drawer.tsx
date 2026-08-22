@@ -7,6 +7,7 @@ import {
   Copy,
   ExternalLink,
   GitPullRequest,
+  RotateCcw,
   Sparkles,
   X,
 } from "lucide-react";
@@ -28,6 +29,7 @@ export interface CardPreviewDrawerProps {
   card: Card | null;
   onClose: () => void;
   onMoveColumn?: (cardId: string, targetColumnId: string) => void;
+  onResetToGit?: (cardId: string) => void;
   columns?: ColumnOption[];
 }
 
@@ -44,6 +46,7 @@ export function CardPreviewDrawer({
   card,
   onClose,
   onMoveColumn,
+  onResetToGit,
   columns = DEFAULT_COLUMNS,
 }: CardPreviewDrawerProps) {
   const reduceMotion = useReducedMotion() ?? false;
@@ -84,6 +87,8 @@ export function CardPreviewDrawer({
   const kindLabel =
     card?.type === "pull" ? "Pull Request" : card?.type === "issue" ? "Issue" : "Local Card";
   const KindIcon = card?.type === "pull" ? GitPullRequest : CircleDot;
+  const naturalColumnTitle =
+    columns.find((c) => c.id === card?.naturalColumnId)?.title ?? card?.naturalColumnId;
 
   return (
     <AnimatePresence>
@@ -125,6 +130,12 @@ export function CardPreviewDrawer({
                 {card.state != null && (
                   <Badge variant={isOpen ? "success" : "neutral"} className="text-[11px]">
                     {formatState(card.state)}
+                  </Badge>
+                )}
+
+                {card.isManualOverride && (
+                  <Badge variant="neutral" className="border-warning/30 bg-warning/10 text-[10px] text-warning font-mono">
+                    Manual Override
                   </Badge>
                 )}
               </div>
@@ -186,31 +197,56 @@ export function CardPreviewDrawer({
               </h2>
 
               {/* Status & Placement Grid */}
-              <div className="mt-4 flex flex-wrap items-center gap-3 rounded-lg border border-border/60 bg-muted/30 p-3 text-xs text-muted-foreground">
-                <div className="flex items-center gap-1.5">
-                  <span className="font-medium text-foreground">Column:</span>
-                  {onMoveColumn ? (
-                    <Select
-                      aria-label="Change column"
-                      options={columnOptions}
-                      value={card.columnId}
-                      onValueChange={(next) => onMoveColumn(card.id, next)}
-                      className="w-32"
-                    />
-                  ) : (
-                    <Badge variant="accent" className="font-mono">
-                      {columns.find((c) => c.id === card.columnId)?.title ?? card.columnId}
-                    </Badge>
-                  )}
+              <div className="mt-4 rounded-lg border border-border/60 bg-muted/30 p-3 text-xs text-muted-foreground">
+                <div className="flex flex-wrap items-center gap-3">
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-medium text-foreground">Column:</span>
+                    {onMoveColumn ? (
+                      <Select
+                        aria-label="Change column"
+                        options={columnOptions}
+                        value={card.columnId}
+                        onValueChange={(next) => onMoveColumn(card.id, next)}
+                        className="w-32"
+                      />
+                    ) : (
+                      <Badge variant="accent" className="font-mono">
+                        {columns.find((c) => c.id === card.columnId)?.title ?? card.columnId}
+                      </Badge>
+                    )}
+                  </div>
+
+                  <div className="ml-auto flex items-center gap-3 font-mono text-[11px] tabular-nums">
+                    {card.updatedAt && (
+                      <span title={new Date(card.updatedAt).toLocaleString()}>
+                        Updated {formatRelativeShort(card.updatedAt)} ago
+                      </span>
+                    )}
+                  </div>
                 </div>
 
-                <div className="ml-auto flex items-center gap-3 font-mono text-[11px] tabular-nums">
-                  {card.updatedAt && (
-                    <span title={new Date(card.updatedAt).toLocaleString()}>
-                      Updated {formatRelativeShort(card.updatedAt)} ago
-                    </span>
-                  )}
-                </div>
+                {card.isManualOverride && (
+                  <div className="mt-2.5 flex flex-wrap items-center justify-between gap-2 border-t border-border/50 pt-2 text-[11px]">
+                    <div className="flex items-center gap-1.5 text-warning">
+                      <span className="h-1.5 w-1.5 rounded-full bg-warning" aria-hidden="true" />
+                      <span>
+                        Git default: <strong className="font-medium text-foreground">{naturalColumnTitle}</strong>
+                      </span>
+                    </div>
+                    {onResetToGit && (
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => onResetToGit(card.id)}
+                        className="h-6 px-2 text-[11px] text-foreground hover:border-primary/40 hover:text-primary"
+                      >
+                        <RotateCcw className="mr-1 h-3 w-3" aria-hidden="true" />
+                        Reset to Git status
+                      </Button>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* Labels Section */}

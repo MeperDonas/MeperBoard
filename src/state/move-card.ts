@@ -64,3 +64,11 @@ export async function persistCardMove(move: CardMove): Promise<void> {
 
   throw new Error(`Unknown card id: ${move.cardId}`);
 }
+
+/** Clear any manual column override on a GitHub card, reverting to its default state. */
+export async function resetCardMove(cardId: string): Promise<void> {
+  const ref = parseGithubCardId(cardId);
+  if (ref != null) {
+    await githubItemRepo.clearColumnOverride(ref.repo, ref.number);
+  }
+}

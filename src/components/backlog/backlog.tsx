@@ -45,6 +45,7 @@ import {
   sortCards,
   useBacklog,
   useMoveCard,
+  useResetCardMove,
   type BacklogFilters,
   type BacklogSort,
   type Card,
@@ -93,6 +94,7 @@ export function Backlog({ localActions }: BacklogProps = {}) {
   const router = useGuardedRouter();
   const reduceMotion = useReducedMotion() ?? false;
   const moveCard = useMoveCard();
+  const resetCard = useResetCardMove();
 
   const [typeFilter, setTypeFilter] = useState<TypeFilter>("all");
   const [labelFilter, setLabelFilter] = useState<string>(ALL_LABELS);
@@ -297,7 +299,17 @@ export function Backlog({ localActions }: BacklogProps = {}) {
             toColumnId,
           });
           if (selectedCard) {
-            setSelectedCard({ ...selectedCard, columnId: toColumnId });
+            setSelectedCard({ ...selectedCard, columnId: toColumnId, isManualOverride: true });
+          }
+        }}
+        onResetToGit={(cardId) => {
+          resetCard.mutate(cardId);
+          if (selectedCard && selectedCard.naturalColumnId) {
+            setSelectedCard({
+              ...selectedCard,
+              columnId: selectedCard.naturalColumnId,
+              isManualOverride: false,
+            });
           }
         }}
       />

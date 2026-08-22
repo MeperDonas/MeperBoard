@@ -24,6 +24,10 @@ export interface Card {
   labels: string[];
   /** Resolved column id (a `ColumnId` from the column strategies). */
   columnId: string;
+  /** Natural upstream column mapped by GitHub state strategy before manual overrides. */
+  naturalColumnId?: string;
+  /** True when the card's column was manually changed away from the Git default. */
+  isManualOverride?: boolean;
   repo: RepoId | null;
   number: number | null;
   state: string | null;
@@ -52,11 +56,13 @@ function isGithubItem(item: GithubItem | LocalItem): item is GithubItem {
 }
 
 function githubToCard(item: GithubItem, overrideColumn?: string): Card {
-  const resolved = resolveGithubColumn(item);
+  const naturalColumnId = resolveGithubColumn(item);
   const columnId =
     item.state === "closed" && overrideColumn !== "done"
       ? "done"
-      : (overrideColumn ?? resolved);
+      : (overrideColumn ?? naturalColumnId);
+
+  const isManualOverride = overrideColumn != null && overrideColumn !== naturalColumnId;
 
   return {
     id: githubCardId(item.repo, item.number),
@@ -66,6 +72,8 @@ function githubToCard(item: GithubItem, overrideColumn?: string): Card {
     body: item.body,
     labels: item.labels,
     columnId,
+    naturalColumnId,
+    isManualOverride,
     repo: item.repo,
     number: item.number,
     state: item.state,
@@ -85,6 +93,8 @@ function localToCard(item: LocalItem): Card {
     body: item.body,
     labels: item.labels,
     columnId: item.column_id,
+    naturalColumnId: item.column_id,
+    isManualOverride: false,
     repo: null,
     number: null,
     state: null,

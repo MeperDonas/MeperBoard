@@ -68,4 +68,30 @@ describe("CardPreviewDrawer", () => {
 
     expect(writeTextMock).toHaveBeenCalledWith("#56 Add awesome preview feature");
   });
+
+  it("shows manual override indicator and calls onResetToGit when clicked", () => {
+    const handleReset = vi.fn();
+    const overriddenCard: Card = {
+      ...mockCard,
+      naturalColumnId: "backlog",
+      isManualOverride: true,
+    };
+
+    render(
+      <CardPreviewDrawer
+        card={overriddenCard}
+        onClose={vi.fn()}
+        onResetToGit={handleReset}
+      />,
+    );
+
+    expect(screen.getByText("Manual Override")).toBeInTheDocument();
+    expect(screen.getByText(/Git default:/)).toBeInTheDocument();
+
+    const resetButton = screen.getByRole("button", { name: /Reset to Git status/i });
+    expect(resetButton).toBeInTheDocument();
+    fireEvent.click(resetButton);
+
+    expect(handleReset).toHaveBeenCalledWith(overriddenCard.id);
+  });
 });

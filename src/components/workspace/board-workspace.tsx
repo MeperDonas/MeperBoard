@@ -20,7 +20,7 @@ import {
 } from "../../lib/local-cards-collapsed";
 import { SPRING_RAIL } from "../../lib/motion";
 import { useMinWidth } from "../../lib/use-min-width";
-import { useBacklog, useLocalCards, useMoveCard, useSync, type Card } from "../../state";
+import { useBacklog, useLocalCards, useMoveCard, useResetCardMove, useSync, type Card } from "../../state";
 import { AppHeader } from "../app-header/app-header";
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
@@ -47,6 +47,7 @@ export function BoardWorkspace() {
   const [collapsed, setCollapsed] = useState<boolean>(() => loadLocalCardsCollapsed());
   const [selectedCard, setSelectedCard] = useState<Card | null>(null);
   const moveCard = useMoveCard();
+  const resetCard = useResetCardMove();
 
   useEffect(() => {
     saveLocalCardsCollapsed(collapsed);
@@ -79,7 +80,17 @@ export function BoardWorkspace() {
             toColumnId,
           });
           if (selectedCard) {
-            setSelectedCard({ ...selectedCard, columnId: toColumnId });
+            setSelectedCard({ ...selectedCard, columnId: toColumnId, isManualOverride: true });
+          }
+        }}
+        onResetToGit={(cardId) => {
+          resetCard.mutate(cardId);
+          if (selectedCard && selectedCard.naturalColumnId) {
+            setSelectedCard({
+              ...selectedCard,
+              columnId: selectedCard.naturalColumnId,
+              isManualOverride: false,
+            });
           }
         }}
       />

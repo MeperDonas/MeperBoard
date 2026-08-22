@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 
 import { githubItemRepo, localItemRepo } from "../data/repositories";
 import { makeGithubItem, makeLocalItem, resetDb } from "./test-utils";
-import { parseGithubCardId, parseLocalCardId, persistCardMove } from "./move-card";
+import { parseGithubCardId, parseLocalCardId, persistCardMove, resetCardMove } from "./move-card";
 
 describe("parseLocalCardId", () => {
   it("extracts the local id from a local card id", () => {
@@ -65,5 +65,17 @@ describe("persistCardMove", () => {
     await expect(persistCardMove({ cardId: "local:missing", toColumnId: "done" })).rejects.toThrow(
       /not found/i,
     );
+  });
+});
+
+describe("resetCardMove", () => {
+  beforeEach(resetDb);
+
+  it("clears a previously stored column override for a GitHub card", async () => {
+    await githubItemRepo.setColumnOverride("meperdonas/meperboard", 3, "done");
+    expect(await githubItemRepo.getColumnOverride("meperdonas/meperboard", 3)).toBe("done");
+
+    await resetCardMove("github:meperdonas/meperboard:3");
+    expect(await githubItemRepo.getColumnOverride("meperdonas/meperboard", 3)).toBeUndefined();
   });
 });

@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
-import { persistCardMove, type CardMove } from "./move-card";
+import { persistCardMove, resetCardMove, type CardMove } from "./move-card";
 import { queryKeys } from "./query-keys";
 
 /**
@@ -17,6 +17,19 @@ export function useMoveCard() {
       void queryClient.invalidateQueries({ queryKey: queryKeys.board });
       void queryClient.invalidateQueries({ queryKey: queryKeys.backlog });
       void queryClient.invalidateQueries({ queryKey: queryKeys.localCards });
+    },
+  });
+}
+
+/** Mutation wrapper to clear manual overrides and restore the item to its natural Git column. */
+export function useResetCardMove() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (cardId: string) => resetCardMove(cardId),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.board });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.backlog });
     },
   });
 }
