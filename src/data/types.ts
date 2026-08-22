@@ -19,6 +19,8 @@ export interface Repo {
   owner: string;
   name: string;
   last_sync_at: string | null;
+  /** True only for the repository currently selected as the active board source. */
+  is_active?: boolean;
 }
 
 /**
