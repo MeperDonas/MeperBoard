@@ -93,8 +93,8 @@ export function Backlog({ localActions }: BacklogProps = {}) {
 
   const [typeFilter, setTypeFilter] = useState<TypeFilter>("all");
   const [labelFilter, setLabelFilter] = useState<string>(ALL_LABELS);
-  const [sortField, setSortField] = useState<SortField>("title");
-  const [sortDir, setSortDir] = useState<SortDirection>("asc");
+  const [sortField, setSortField] = useState<SortField>("updated");
+  const [sortDir, setSortDir] = useState<SortDirection>("desc");
   const [groupBy, setGroupBy] = useState<BacklogGroupKey>("none");
   const [searchInput, setSearchInput] = useState("");
   const searchQuery = useDebouncedValue(searchInput, SEARCH_DEBOUNCE_MS);
@@ -338,7 +338,7 @@ function PlainEntryList({
             <li
               key={entry.id}
               role="presentation"
-              className="sticky top-14 z-20 h-9 bg-background"
+              className="sticky top-14 z-20 py-1"
             >
               <GroupHeader label={entry.label} count={entry.count} />
             </li>
@@ -426,7 +426,7 @@ function VirtualEntryList({
             <div
               key={entry.id}
               role="presentation"
-              className="sticky top-14 z-20 h-9 bg-background"
+              className="sticky top-14 z-20 py-1"
             >
               <GroupHeader label={entry.label} count={entry.count} />
             </div>
@@ -466,9 +466,11 @@ function VirtualEntryList({
 
 function GroupHeader({ label, count }: { label: string; count: number }) {
   return (
-    <div className="flex h-full items-center gap-2 px-0.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-      <span className="h-1.5 w-1.5 rounded-full bg-primary shadow-xs" aria-hidden="true" />
-      {label}
+    <div className="flex items-center justify-between rounded-xl border border-border/80 bg-card/95 px-3.5 py-1.5 shadow-xs backdrop-blur-md">
+      <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-foreground/90">
+        <span className="h-2 w-2 rounded-full bg-primary shadow-xs ring-1 ring-primary/40" aria-hidden="true" />
+        <span>{label}</span>
+      </div>
       <Badge variant="accent" className="tabular-nums font-mono normal-case">
         {count}
       </Badge>

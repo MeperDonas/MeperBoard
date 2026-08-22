@@ -82,29 +82,48 @@ describe("Backlog", () => {
 
   it("sorts by the selected field and direction", async () => {
     await githubItemRepo.upsert(
-      makeGithubItem({ number: 1, title: "charlie", synced_at: "2026-08-02T00:00:00Z" }),
+      makeGithubItem({
+        number: 1,
+        title: "charlie",
+        synced_at: "2026-08-02T00:00:00Z",
+        github_updated_at: "2026-08-02T00:00:00Z",
+      }),
     );
     await githubItemRepo.upsert(
-      makeGithubItem({ number: 2, title: "alpha", synced_at: "2026-08-03T00:00:00Z" }),
+      makeGithubItem({
+        number: 2,
+        title: "alpha",
+        synced_at: "2026-08-03T00:00:00Z",
+        github_updated_at: "2026-08-03T00:00:00Z",
+      }),
     );
     await githubItemRepo.upsert(
-      makeGithubItem({ number: 3, title: "bravo", synced_at: "2026-08-01T00:00:00Z" }),
+      makeGithubItem({
+        number: 3,
+        title: "bravo",
+        synced_at: "2026-08-01T00:00:00Z",
+        github_updated_at: "2026-08-01T00:00:00Z",
+      }),
     );
 
     renderBacklog();
 
     await waitFor(() => expect(screen.getByText("charlie")).toBeInTheDocument());
 
-    // Default sort: title ascending.
-    expect(titles()).toEqual(["alpha", "bravo", "charlie"]);
+    // Default sort: recently updated descending (alpha 08-03, charlie 08-02, bravo 08-01).
+    expect(titles()).toEqual(["alpha", "charlie", "bravo"]);
+
+    // Sort by title (inherits desc direction -> charlie, bravo, alpha).
+    changeSelect("Sort by", "Title");
+    await waitFor(() => expect(titles()).toEqual(["charlie", "bravo", "alpha"]));
+
+    // Toggle to ascending (alpha, bravo, charlie).
+    fireEvent.click(screen.getByRole("button", { name: "Toggle sort direction" }));
+    await waitFor(() => expect(titles()).toEqual(["alpha", "bravo", "charlie"]));
 
     // Sort by created ascending.
     changeSelect("Sort by", "Date created");
     await waitFor(() => expect(titles()).toEqual(["bravo", "charlie", "alpha"]));
-
-    // Toggle to descending.
-    fireEvent.click(screen.getByRole("button", { name: "Toggle sort direction" }));
-    await waitFor(() => expect(titles()).toEqual(["alpha", "charlie", "bravo"]));
   });
 
   it("shows an empty state when the store is empty", async () => {
@@ -134,7 +153,13 @@ describe("Backlog pagination", () => {
 
   async function seedIssues(count: number) {
     for (let index = 1; index <= count; index += 1) {
-      await githubItemRepo.upsert(makeGithubItem({ number: index, title: `Card ${index}` }));
+      await githubItemRepo.upsert(
+        makeGithubItem({
+          number: index,
+          title: `Card ${index}`,
+          github_updated_at: new Date(Date.UTC(2026, 7, 1, 0, 0, index)).toISOString(),
+        }),
+      );
     }
   }
 
@@ -143,7 +168,7 @@ describe("Backlog pagination", () => {
 
     renderBacklog();
 
-    await waitFor(() => expect(screen.getByText("Card 1")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText("Card 25")).toBeInTheDocument());
     expect(backlogItems()).toHaveLength(25);
     expect(screen.queryByTestId("backlog-pager")).not.toBeInTheDocument();
   });
@@ -153,7 +178,7 @@ describe("Backlog pagination", () => {
 
     renderBacklog();
 
-    await waitFor(() => expect(screen.getByText("Card 1")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText("Card 30")).toBeInTheDocument());
 
     const pager = screen.getByTestId("backlog-pager");
     expect(pager).toHaveTextContent("Page 1 of 2");
@@ -162,10 +187,12 @@ describe("Backlog pagination", () => {
     fireEvent.click(screen.getByRole("button", { name: "Next page" }));
 
     await waitFor(() => expect(pager).toHaveTextContent("Page 2 of 2"));
+    expect(screen.getByText("Card 1")).toBeInTheDocument();
     expect(backlogItems()).toHaveLength(5);
 
     fireEvent.click(screen.getByRole("button", { name: "Previous page" }));
     await waitFor(() => expect(pager).toHaveTextContent("Page 1 of 2"));
+    expect(screen.getByText("Card 30")).toBeInTheDocument();
     expect(backlogItems()).toHaveLength(25);
   });
 
@@ -174,7 +201,7 @@ describe("Backlog pagination", () => {
 
     renderBacklog();
 
-    await waitFor(() => expect(screen.getByText("Card 1")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText("Card 40")).toBeInTheDocument());
 
     fireEvent.click(screen.getByRole("button", { name: "Next page" }));
     await waitFor(() =>
@@ -195,7 +222,7 @@ describe("Backlog pagination", () => {
 
     renderBacklog();
 
-    await waitFor(() => expect(screen.getByText("Card 1")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText("Card 30")).toBeInTheDocument());
 
     changeSelect("Rows per page", "50 / page");
 

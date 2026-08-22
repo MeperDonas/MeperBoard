@@ -208,10 +208,12 @@ function compareByField(a: Card, b: Card, field: SortField): number {
   } else if (field === "column") {
     const byCol = compareStrings(a.columnId, b.columnId);
     if (byCol !== 0) return byCol;
+  } else if (field === "updated" || field === "created") {
+    const timeA = new Date(field === "updated" ? a.updatedAt : a.createdAt).getTime() || 0;
+    const timeB = new Date(field === "updated" ? b.updatedAt : b.createdAt).getTime() || 0;
+    if (timeA !== timeB) return timeA - timeB;
   } else {
-    const valueA = field === "title" ? a.title : field === "created" ? a.createdAt : a.updatedAt;
-    const valueB = field === "title" ? b.title : field === "created" ? b.createdAt : b.updatedAt;
-    const byValue = compareStrings(valueA, valueB);
+    const byValue = compareStrings(a.title, b.title);
     if (byValue !== 0) return byValue;
   }
   return compareStrings(a.id, b.id);
