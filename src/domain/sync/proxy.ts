@@ -1,16 +1,20 @@
-import { execSync } from "node:child_process";
-
 /**
  * Read-only GitHub proxy logic.
  *
  * The Next.js route handler under `src/app/api/github/[...path]/route.ts` is a
  * thin shell over these pure functions. Keeping the logic here (rather than in
- * the route file) makes the method allow-list, URL building, token resolution,
- * and rate-limit forwarding directly unit-testable without spinning up `next`.
+ * the route file) makes the method allow-list, URL building, origin/path
+ * allow-list, token resolution, and rate-limit forwarding directly
+ * unit-testable without spinning up `next`.
  *
  * READ-ONLY GUARANTEE: the proxy forwards only GET. The method allow-list plus
  * the route handler exporting no POST/PATCH/PUT/DELETE handlers ensure the
  * client can never trigger a GitHub write.
+ *
+ * EDGE-SAFE: no Node-only builtins are imported here. The token comes straight
+ * from the server env (`GITHUB_TOKEN`) — the `gh auth token` subprocess path was
+ * removed (shell/subprocess threat boundary). A per-user token from the JWE
+ * session is the Slice 3 work; for Slice 1 the shared env token still works.
  */
 
 export const GITHUB_API_BASE = "https://api.github.com";
@@ -77,29 +81,13 @@ export function isAllowedPath(path: string[]): boolean {
 }
 
 /**
- * Resolve the GitHub PAT. Prefers the server-side `GITHUB_TOKEN` env var and
- * falls back to `gh auth token`. Never hardcodes a token; anonymous (null) is
- * allowed but rate-limited.
+ * Resolve the GitHub token. For Slice 1 this is the server-side `GITHUB_TOKEN`
+ * env var (the shared relay token). The per-user JWE token replaces this in
+ * Slice 3. Never hardcodes a token; anonymous (null) is allowed but
+ * rate-limited.
  */
-export function resolveToken(
-  env: Record<string, string | undefined>,
-  getGhToken: () => string | null,
-): string | null {
-  if (env.GITHUB_TOKEN) return env.GITHUB_TOKEN;
-  return getGhToken();
-}
-
-/** Read the token from the `gh` CLI when it is available and authenticated. */
-export function getGhAuthToken(): string | null {
-  try {
-    const token = execSync("gh auth token", {
-      encoding: "utf8",
-      stdio: ["ignore", "pipe", "ignore"],
-    }).trim();
-    return token.length > 0 ? token : null;
-  } catch {
-    return null;
-  }
+export function resolveToken(env: Record<string, string | undefined>): string | null {
+  return env.GITHUB_TOKEN ?? null;
 }
 
 export interface ProxyResult {

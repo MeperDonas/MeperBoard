@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
+import * as proxyModule from "./proxy";
 import {
   GITHUB_API_BASE,
   buildGithubApiUrl,
@@ -49,16 +50,18 @@ describe("isAllowedMethod", () => {
 });
 
 describe("resolveToken", () => {
-  it("prefers GITHUB_TOKEN over the gh fallback", () => {
-    expect(resolveToken({ GITHUB_TOKEN: "pat" }, () => "gh-token")).toBe("pat");
+  it("returns the GITHUB_TOKEN when set", () => {
+    expect(resolveToken({ GITHUB_TOKEN: "pat" })).toBe("pat");
   });
 
-  it("falls back to the gh token when GITHUB_TOKEN is unset", () => {
-    expect(resolveToken({}, () => "gh-token")).toBe("gh-token");
+  it("returns null when GITHUB_TOKEN is unset", () => {
+    expect(resolveToken({})).toBeNull();
   });
+});
 
-  it("returns null with neither source", () => {
-    expect(resolveToken({}, () => null)).toBeNull();
+describe("shell/subprocess boundary", () => {
+  it("no longer exposes a gh-auth-token subprocess helper", () => {
+    expect((proxyModule as Record<string, unknown>).getGhAuthToken).toBeUndefined();
   });
 });
 
