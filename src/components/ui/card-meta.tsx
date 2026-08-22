@@ -56,7 +56,7 @@ export function CardSourceKindBadge({ type }: { type: CardMetaInfo["type"] }) {
 export function CardNumberText({ number }: { number: number | null }) {
   if (number == null) return null;
   return (
-    <span className="shrink-0 text-xs tabular-nums text-muted-foreground">#{number}</span>
+    <span className="shrink-0 font-mono text-xs tabular-nums text-muted-foreground">#{number}</span>
   );
 }
 
@@ -72,7 +72,7 @@ export function CardRelativeDate({ iso, className }: { iso: string; className?: 
   if (relative === "") return null;
   return (
     <span
-      className={cn("shrink-0 text-xs tabular-nums text-muted-foreground", className)}
+      className={cn("shrink-0 font-mono text-xs tabular-nums text-muted-foreground", className)}
       title={new Date(iso).toLocaleString()}
     >
       {relative}

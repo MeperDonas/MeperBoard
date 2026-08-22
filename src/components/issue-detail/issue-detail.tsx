@@ -73,7 +73,7 @@ function IssueDetailView({ item }: { item: GithubItem }) {
           >
             {formatState(item.state)}
           </span>
-          <span className="text-xs tabular-nums text-muted-foreground">#{item.number}</span>
+          <span className="font-mono text-xs tabular-nums text-muted-foreground">#{item.number}</span>
         </div>
         <h2 className="mt-3 text-2xl font-semibold tracking-tight">{item.title}</h2>
         {item.html_url && (
@@ -136,13 +136,13 @@ function IssueDetailView({ item }: { item: GithubItem }) {
                       href={prUrl}
                       target="_blank"
                       rel="noreferrer"
-                      className="inline-flex items-center gap-1 rounded-md bg-muted px-2 py-0.5 text-xs tabular-nums text-link transition-colors duration-150 hover:underline hover:underline-offset-4"
+                      className="inline-flex items-center gap-1 rounded-md bg-muted px-2 py-0.5 font-mono text-xs tabular-nums text-link transition-colors duration-150 hover:underline hover:underline-offset-4"
                     >
                       #{pr}
                       <ExternalLink className="h-3 w-3" aria-hidden="true" />
                     </a>
                   ) : (
-                    <span className="rounded-md bg-muted px-2 py-0.5 text-xs tabular-nums text-muted-foreground">
+                    <span className="rounded-md bg-muted px-2 py-0.5 font-mono text-xs tabular-nums text-muted-foreground">
                       #{pr}
                     </span>
                   )}

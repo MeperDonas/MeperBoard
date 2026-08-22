@@ -244,7 +244,7 @@ export function Select({
           role="listbox"
           id={listboxId}
           aria-label={ariaAndId["aria-label"]}
-          className="absolute left-0 top-full z-50 mt-1 w-max min-w-full max-w-72 overflow-hidden rounded-lg border bg-popover p-1 text-popover-foreground shadow-lg"
+          className="absolute left-0 top-full z-50 mt-1.5 w-max min-w-full max-w-72 overflow-hidden rounded-xl border bg-popover/95 p-1 text-popover-foreground shadow-xl backdrop-blur-md ring-1 ring-border/50"
           style={{ transformOrigin: "top center" }}
         >
           {options.map((option, index) => {
