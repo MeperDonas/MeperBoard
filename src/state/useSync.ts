@@ -5,6 +5,7 @@ import { githubItemRepo } from "../data/repositories";
 import type { GithubItem } from "../data/types";
 import { GitHubConnector } from "../domain/sync/connector";
 import { queryKeys } from "./query-keys";
+import { useActiveRepo } from "./use-repos";
 
 const GITHUB_API_ORIGIN = "https://api.github.com";
 
@@ -32,13 +33,18 @@ export function proxyFetcher(url: string): Promise<Response> {
  * invalidates every derived read so the board/backlog/detail reflect the new
  * mirror. Local cards are intentionally NOT invalidated — sync never touches
  * them.
+ *
+ * The source repo defaults to the persisted active repo (repoRepo), falling
+ * back to `DEFAULT_REPO` only when no active repo has been selected. An
+ * explicit `owner`/`name` option always wins.
  */
 export function useSync(options: SyncOptions = {}) {
   const queryClient = useQueryClient();
+  const activeRepo = useActiveRepo();
 
   const connector = useMemo(
-    () => options.connector ?? buildDefaultConnector(options),
-    [options.connector, options.owner, options.name, options.fetcher],
+    () => options.connector ?? buildDefaultConnector(options, activeRepo.data),
+    [options.connector, options.owner, options.name, options.fetcher, activeRepo.data],
   );
 
   return useMutation({
@@ -51,10 +57,10 @@ export function useSync(options: SyncOptions = {}) {
   });
 }
 
-function buildDefaultConnector(options: SyncOptions): GitHubConnector {
+function buildDefaultConnector(options: SyncOptions, activeRepo?: { owner: string; name: string }): GitHubConnector {
   return new GitHubConnector({
-    owner: options.owner ?? DEFAULT_REPO.owner,
-    name: options.name ?? DEFAULT_REPO.name,
+    owner: options.owner ?? activeRepo?.owner ?? DEFAULT_REPO.owner,
+    name: options.name ?? activeRepo?.name ?? DEFAULT_REPO.name,
     fetcher: options.fetcher ?? proxyFetcher,
     store: githubItemRepo,
   });
