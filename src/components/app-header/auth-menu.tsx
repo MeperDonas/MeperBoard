@@ -1,12 +1,16 @@
 "use client";
 
 import { motion, useReducedMotion } from "framer-motion";
-import { Activity, Database, LogOut } from "lucide-react";
+import { Activity, Database, FolderGit2, LogOut } from "lucide-react";
 
+import type { Repo } from "../../data/types";
+import { OPEN_REPO_SWITCHER_EVENT } from "./repo-switcher";
 import type { AuthUser } from "./use-auth";
 
 interface AuthMenuProps {
   user: AuthUser;
+  /** The persisted active repo, or `undefined` while it resolves. */
+  activeRepo?: Repo;
   onLogout: () => void;
   onClose: () => void;
 }
@@ -14,17 +18,26 @@ interface AuthMenuProps {
 /**
  * Account dropdown for the authenticated header state.
  *
- * Shows the profile (avatar + login), the active repo (placeholder until the
- * Slice 5 repo switcher), the read-only rate-limit snapshot, and a logout
- * action. Reacts and re-renders through the shared `useAuth` state.
+ * Shows the profile (avatar + login), the active repo (from repoRepo — the
+ * RepoSwitcher source of truth), the read-only rate-limit snapshot (still a
+ * placeholder in this slice), a "Switch repository" action that opens the live
+ * RepoSwitcher, and a logout action. Reacts and re-renders through the shared
+ * `useAuth` + `useActiveRepo` state.
  */
-export function AuthMenu({ user, onLogout, onClose }: AuthMenuProps) {
+export function AuthMenu({ user, activeRepo, onLogout, onClose }: AuthMenuProps) {
   const reduceMotion = useReducedMotion() ?? false;
 
   function handleLogout() {
     void onLogout();
     onClose();
   }
+
+  function handleSwitchRepo() {
+    window.dispatchEvent(new CustomEvent(OPEN_REPO_SWITCHER_EVENT));
+    onClose();
+  }
+
+  const activeRepoLabel = activeRepo ? `${activeRepo.owner}/${activeRepo.name}` : "—";
 
   return (
     <motion.div
@@ -55,8 +68,18 @@ export function AuthMenu({ user, onLogout, onClose }: AuthMenuProps) {
           <Database className="h-3.5 w-3.5" aria-hidden="true" />
           Active repo
         </span>
-        <span className="font-medium text-foreground">—</span>
+        <span className="max-w-32 truncate font-medium text-foreground">{activeRepoLabel}</span>
       </div>
+
+      <button
+        type="button"
+        role="menuitem"
+        onClick={handleSwitchRepo}
+        className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-xs font-medium text-muted-foreground transition-colors duration-100 hover:bg-accent hover:text-foreground"
+      >
+        <FolderGit2 className="h-3.5 w-3.5" aria-hidden="true" />
+        Switch repository
+      </button>
 
       <div className="flex items-center justify-between gap-2 rounded-lg px-2 py-1.5 text-xs">
         <span className="flex items-center gap-2 text-muted-foreground">

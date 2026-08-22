@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createTestQueryClient, queryWrapper } from "../../state/test-utils";
 import { CommandPalette, TOGGLE_LOCAL_CARDS_EVENT } from "./command-palette";
+import { OPEN_REPO_SWITCHER_EVENT } from "./repo-switcher";
 
 const account = {
   login: "meperdonas",
@@ -165,13 +166,21 @@ describe("CommandPalette", () => {
     );
   });
 
-  it("shows Switch repository as a coming-soon placeholder", () => {
+  it("opens the repo switcher from the Switch repository command", () => {
     mockFetch({ "/api/auth/me": () => jsonResponse({}, 401) });
+    const dispatch = vi.spyOn(window, "dispatchEvent");
     render(<CommandPalette />, { wrapper: queryWrapper(client) });
     openPalette();
 
     const option = screen.getByRole("option", { name: /switch repository/i });
-    expect(option).toHaveAttribute("aria-disabled", "true");
+    expect(option).not.toHaveAttribute("aria-disabled", "true");
+
+    fireEvent.change(screen.getByRole("combobox"), { target: { value: "switch repo" } });
+    fireEvent.keyDown(screen.getByRole("combobox"), { key: "Enter" });
+
+    expect(dispatch).toHaveBeenCalledWith(
+      expect.objectContaining({ type: OPEN_REPO_SWITCHER_EVENT }),
+    );
   });
 
   it("runs the Sync now quick action through the proxy fetcher", async () => {
