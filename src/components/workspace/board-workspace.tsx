@@ -1,9 +1,11 @@
 "use client";
 
 import { RefreshCw } from "lucide-react";
+import { useMemo } from "react";
 
 import { cn } from "../../lib/utils";
-import { useMoveCard, useSync } from "../../state";
+import { countByType, formatCardSummary } from "../../lib/card-filters";
+import { useMoveCard, useSync, useBacklog } from "../../state";
 import { AppHeader } from "../app-header/app-header";
 import { Board } from "../board";
 import { LocalCards } from "../local-cards";
@@ -42,6 +44,7 @@ export function BoardWorkspace() {
               ? `Imported ${sync.data.imported} item${sync.data.imported === 1 ? "" : "s"}`
               : "Not synced yet"}
         </span>
+        <TotalCount />
       </div>
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
@@ -49,5 +52,17 @@ export function BoardWorkspace() {
         <LocalCards />
       </div>
     </div>
+  );
+}
+
+/** Total item count next to the sync bar (e.g. "128 issues · 12 local"). */
+function TotalCount() {
+  const { data } = useBacklog();
+  const summary = useMemo(() => formatCardSummary(countByType(data ?? [])), [data]);
+
+  return (
+    <span className="ml-auto text-xs tabular-nums text-muted-foreground" data-testid="total-count">
+      {summary}
+    </span>
   );
 }

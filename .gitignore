@@ -1,6 +1,9 @@
 # SDD local artifacts
 .atl/
 
+# CodeGraph local index
+.codegraph/
+
 # Engram local project config
 .engram/
 
