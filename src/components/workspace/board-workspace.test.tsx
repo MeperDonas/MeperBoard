@@ -74,7 +74,14 @@ describe("BoardWorkspace", () => {
   });
 
   it("imports issues through the proxy fetcher and renders them on the board", async () => {
-    const fetchMock = vi.fn().mockResolvedValue(jsonResponse(issuePayloads));
+    // URL-aware so the header's `/api/auth/me` check resolves as logged out
+    // (a fresh Response per call; `mockResolvedValue` shares one body and a
+    // second `.json()` on it would throw "Body is unusable").
+    const fetchMock = vi.fn((input: RequestInfo | URL) => {
+      const url = typeof input === "string" ? input : (input as Request).url;
+      if (url === "/api/auth/me") return Promise.resolve(jsonResponse({}, 401));
+      return Promise.resolve(jsonResponse(issuePayloads));
+    });
     vi.stubGlobal("fetch", fetchMock);
 
     try {
