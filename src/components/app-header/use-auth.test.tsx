@@ -67,6 +67,19 @@ describe("useAuth", () => {
     expect(result.current.isAuthenticated).toBe(true);
   });
 
+  it("exposes the rate_limit from /me when present", async () => {
+    const withRateLimit = { ...account, rate_limit: { remaining: 4321, resetAt: 1725000000 } };
+    mockFetch({ "/api/auth/me": () => jsonResponse(withRateLimit) });
+
+    const { result } = renderHook(() => useAuth(), { wrapper: queryWrapper(client) });
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    expect(result.current.user).toMatchObject({
+      login: "meperdonas",
+      rate_limit: { remaining: 4321, resetAt: 1725000000 },
+    });
+  });
+
   it("surfaces a non-auth failure as an error without treating it as authenticated", async () => {
     mockFetch({ "/api/auth/me": () => jsonResponse({ error: "boom" }, 503) });
 

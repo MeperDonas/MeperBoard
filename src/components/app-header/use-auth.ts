@@ -3,9 +3,17 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback } from "react";
 
+/** Per-user GitHub rate-limit snapshot exposed by `/api/auth/me`. */
+export interface AuthRateLimit {
+  remaining: number | null;
+  resetAt: number | null;
+}
+
 export interface AuthUser {
   login: string;
   avatar_url: string;
+  /** Best-effort rate-limit snapshot, or `null`/absent when `/me` could not read it. */
+  rate_limit?: AuthRateLimit | null;
 }
 
 export interface UseAuthResult {
