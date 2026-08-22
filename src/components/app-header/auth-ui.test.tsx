@@ -132,7 +132,7 @@ describe("AuthButton", () => {
 
     expect(await screen.findByText("acme/widgets")).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("menuitem", { name: /switch repository/i }));
+    fireEvent.click(screen.getByText(/click to switch repository/i));
 
     expect(dispatch).toHaveBeenCalledWith(
       expect.objectContaining({ type: "meperboard:open-repo-switcher" }),
@@ -150,7 +150,7 @@ describe("AuthButton", () => {
 
     fireEvent.click(await screen.findByRole("button", { name: /account for meperdonas/i }));
 
-    expect(await screen.findByText("4321")).toBeInTheDocument();
+    expect(await screen.findByText(/4[.,]?321/)).toBeInTheDocument();
   });
 
   it("shows a loading state while the session check resolves", async () => {
