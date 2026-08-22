@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, JetBrains_Mono } from "next/font/google";
+import { headers } from "next/headers";
 
 import { Providers } from "./providers";
 import "./globals.css";
@@ -27,9 +28,13 @@ export const metadata: Metadata = {
  */
 const themeInitScript = `(function(){try{var t=localStorage.getItem("meperboard-theme");if(t!=="light"&&t!=="dark"){t=window.matchMedia("(prefers-color-scheme: light)").matches?"light":"dark";}document.documentElement.classList.toggle("dark",t==="dark");var a=localStorage.getItem("meperboard-accent")||"cyber-lime";document.documentElement.dataset.accent=a;}catch(e){document.documentElement.classList.add("dark");document.documentElement.dataset.accent="cyber-lime";}})();`;
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
+  // The CSP middleware stamps the per-request nonce as `x-nonce` so the inline
+  // theme script is allowed by `script-src 'nonce-N' 'strict-dynamic'`.
+  const nonce = (await headers()).get("x-nonce") ?? undefined;
+
   return (
     <html
       lang="en"
@@ -37,7 +42,7 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <body className="font-sans antialiased">
-        <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
+        <script nonce={nonce} dangerouslySetInnerHTML={{ __html: themeInitScript }} />
         <Providers>{children}</Providers>
       </body>
     </html>
