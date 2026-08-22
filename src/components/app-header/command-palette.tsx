@@ -35,6 +35,7 @@ import {
   saveStoredAccent,
 } from "../../lib/themes";
 import { useSync } from "../../state";
+import { Portal } from "../ui/portal";
 import { GithubMark } from "./github-mark";
 import { OPEN_REPO_SWITCHER_EVENT } from "./repo-switcher";
 import { useAuth, type AuthUser } from "./use-auth";
@@ -240,122 +241,126 @@ export function CommandPalette() {
       </button>
 
       {open && (
-        <motion.div
-          initial={reduceMotion ? false : { opacity: 0, y: -8, scale: 0.98 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          transition={PANEL_SPRING}
-          role="dialog"
-          aria-modal="true"
-          aria-label="Command palette"
-          className="fixed inset-0 z-50 flex justify-center p-4 pt-[12vh]"
-        >
+        <Portal>
           <div
-            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-            onClick={close}
-            aria-hidden="true"
-          />
-
-          <motion.div
-            initial={reduceMotion ? false : { opacity: 0, scale: 0.98 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={PANEL_SPRING}
-            className="relative z-10 flex w-full max-w-xl flex-col overflow-hidden rounded-2xl border bg-popover/95 text-popover-foreground shadow-2xl backdrop-blur-md ring-1 ring-border/50"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Command palette"
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6"
           >
-            <div className="flex items-center gap-2.5 border-b border-border/60 px-3.5 py-2.5">
-              <Search className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
-              <input
-                ref={inputRef}
-                type="text"
-                role="combobox"
-                aria-label="Search commands"
-                aria-expanded
-                aria-controls={listboxId}
-                aria-activedescendant={
-                  activeIndex >= 0 ? `${listboxId}-option-${activeIndex}` : undefined
-                }
-                aria-autocomplete="list"
-                value={query}
-                onChange={(event) => {
-                  setQuery(event.target.value);
-                  setActivePos(0);
-                }}
-                onKeyDown={handleInputKeyDown}
-                placeholder="Type a command or search…"
-                className="h-5 w-full flex-1 bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground/70"
-              />
-              <kbd
-                aria-hidden="true"
-                className="shrink-0 rounded border border-border/60 bg-background/60 px-1 font-mono text-[10px] text-muted-foreground"
-              >
-                esc
-              </kbd>
-            </div>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.15 }}
+              className="fixed inset-0 bg-background/80 backdrop-blur-sm"
+              onClick={close}
+              aria-hidden="true"
+            />
 
-            <div
-              id={listboxId}
-              role="listbox"
-              aria-label="Commands"
-              className="max-h-[55vh] overflow-y-auto p-1.5 no-scrollbar"
+            <motion.div
+              initial={reduceMotion ? false : { opacity: 0, scale: 0.95, y: 8 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 8 }}
+              transition={PANEL_SPRING}
+              className="relative z-10 flex w-full max-w-xl flex-col overflow-hidden rounded-2xl border border-border/80 bg-card/95 text-card-foreground shadow-2xl backdrop-blur-xl ring-1 ring-border/50"
             >
-              {GROUP_ORDER.map((group) => {
-                const items = visibleCommands.filter((command) => command.group === group);
-                if (items.length === 0) return null;
-                return (
-                  <div key={group} className="mb-1">
-                    <div className="px-2 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                      {group}
-                    </div>
-                    <div className="flex flex-col gap-0.5">
-                      {items.map((command) => {
-                        const index = visibleCommands.indexOf(command);
-                        const isActive = index === activeIndex;
-                        return (
-                          <div
-                            key={command.id}
-                            id={`${listboxId}-option-${index}`}
-                            role="option"
-                            aria-selected={isActive}
-                            aria-disabled={command.disabled || undefined}
-                            data-active={isActive}
-                            onPointerMove={() => {
-                              const position = enabledIndices.indexOf(index);
-                              if (position >= 0) setActivePos(position);
-                            }}
-                            onClick={() => {
-                              if (command.disabled || !command.run) return;
-                              runCommand(command);
-                            }}
-                            className={cn(
-                              "flex cursor-pointer items-center gap-2.5 rounded-md px-2 py-1.5 text-sm transition-colors duration-100",
-                              isActive && !command.disabled && "bg-accent text-accent-foreground",
-                              command.disabled && "cursor-not-allowed opacity-60",
-                            )}
-                          >
-                            {renderLeading(command, user)}
-                            <div className="min-w-0 flex-1">
-                              <p className="truncate font-medium">{command.label}</p>
-                              {command.hint && (
-                                <p className="truncate text-[10px] text-muted-foreground">
-                                  {command.hint}
-                                </p>
-                              )}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                );
-              })}
+              <div className="flex items-center gap-2.5 border-b border-border/60 px-4 py-3">
+                <Search className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+                <input
+                  ref={inputRef}
+                  type="text"
+                  role="combobox"
+                  aria-label="Search commands"
+                  aria-expanded
+                  aria-controls={listboxId}
+                  aria-activedescendant={
+                    activeIndex >= 0 ? `${listboxId}-option-${activeIndex}` : undefined
+                  }
+                  aria-autocomplete="list"
+                  value={query}
+                  onChange={(event) => {
+                    setQuery(event.target.value);
+                    setActivePos(0);
+                  }}
+                  onKeyDown={handleInputKeyDown}
+                  placeholder="Type a command or search…"
+                  className="h-6 w-full flex-1 bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground/70"
+                />
+                <kbd
+                  aria-hidden="true"
+                  className="shrink-0 rounded border border-border/60 bg-background/60 px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground"
+                >
+                  esc
+                </kbd>
+              </div>
 
-              {visibleCommands.length === 0 && (
-                <div className="px-2 py-6 text-center text-sm text-muted-foreground">
-                  No commands match “{query}”
-                </div>
-              )}
-            </div>
-          </motion.div>
-        </motion.div>
+              <div
+                id={listboxId}
+                role="listbox"
+                aria-label="Commands"
+                className="max-h-[55vh] overflow-y-auto p-2 no-scrollbar"
+              >
+                {GROUP_ORDER.map((group) => {
+                  const items = visibleCommands.filter((command) => command.group === group);
+                  if (items.length === 0) return null;
+                  return (
+                    <div key={group} className="mb-2 last:mb-0">
+                      <div className="px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                        {group}
+                      </div>
+                      <div className="flex flex-col gap-0.5">
+                        {items.map((command) => {
+                          const index = visibleCommands.indexOf(command);
+                          const isActive = index === activeIndex;
+                          return (
+                            <div
+                              key={command.id}
+                              id={`${listboxId}-option-${index}`}
+                              role="option"
+                              aria-selected={isActive}
+                              aria-disabled={command.disabled || undefined}
+                              data-active={isActive}
+                              onPointerMove={() => {
+                                const position = enabledIndices.indexOf(index);
+                                if (position >= 0) setActivePos(position);
+                              }}
+                              onClick={() => {
+                                if (command.disabled || !command.run) return;
+                                runCommand(command);
+                              }}
+                              className={cn(
+                                "flex cursor-pointer items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm transition-colors duration-100",
+                                isActive && !command.disabled && "bg-accent text-accent-foreground",
+                                command.disabled && "cursor-not-allowed opacity-60",
+                              )}
+                            >
+                              {renderLeading(command, user)}
+                              <div className="min-w-0 flex-1">
+                                <p className="truncate font-medium">{command.label}</p>
+                                {command.hint && (
+                                  <p className="truncate text-[10px] text-muted-foreground">
+                                    {command.hint}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
+
+                {visibleCommands.length === 0 && (
+                  <div className="px-2 py-8 text-center text-sm text-muted-foreground">
+                    No commands match “{query}”
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          </div>
+        </Portal>
       )}
     </>
   );

@@ -120,10 +120,9 @@ describe("AuthButton", () => {
     expect(await screen.findByRole("button", { name: /connect github/i })).toBeInTheDocument();
   });
 
-  it("shows the persisted active repo and opens the switcher from the account menu", async () => {
+  it("shows the persisted active repo in the account menu", async () => {
     await resetDb();
     await repoRepo.setActive("acme", "widgets");
-    const dispatch = vi.spyOn(window, "dispatchEvent");
     mockFetch({ "/api/auth/me": () => jsonResponse(account) });
 
     render(<AuthButton />, { wrapper: queryWrapper(client) });
@@ -131,12 +130,6 @@ describe("AuthButton", () => {
     fireEvent.click(await screen.findByRole("button", { name: /account for meperdonas/i }));
 
     expect(await screen.findByText("acme/widgets")).toBeInTheDocument();
-
-    fireEvent.click(screen.getByText(/click to switch repository/i));
-
-    expect(dispatch).toHaveBeenCalledWith(
-      expect.objectContaining({ type: "meperboard:open-repo-switcher" }),
-    );
   });
 
   it("shows the rate-limit remaining in the account menu when available", async () => {
@@ -188,5 +181,20 @@ describe("AppHeader", () => {
 
     expect(screen.getByRole("navigation")).toBeInTheDocument();
     expect(await screen.findByRole("button", { name: /connect github/i })).toBeInTheDocument();
+  });
+
+  it("opens the repo switcher from the header repo button", async () => {
+    await resetDb();
+    await repoRepo.setActive("acme", "widgets");
+    const dispatch = vi.spyOn(window, "dispatchEvent");
+    mockFetch({ "/api/auth/me": () => jsonResponse({}, 401) });
+
+    render(<AppHeader />, { wrapper: queryWrapper(client) });
+
+    fireEvent.click(screen.getByRole("button", { name: /active repository/i }));
+
+    expect(dispatch).toHaveBeenCalledWith(
+      expect.objectContaining({ type: "meperboard:open-repo-switcher" }),
+    );
   });
 });
