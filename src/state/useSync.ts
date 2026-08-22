@@ -2,7 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useMemo } from "react";
 
 import { githubItemRepo } from "../data/repositories";
-import type { GithubItem } from "../data/types";
+import type { GithubItem, RepoId } from "../data/types";
 import { GitHubConnector } from "../domain/sync/connector";
 import { queryKeys } from "./query-keys";
 import { useActiveRepo } from "./use-repos";
@@ -11,6 +11,11 @@ const GITHUB_API_ORIGIN = "https://api.github.com";
 
 /** Default source repository — MeperPOS is the board's first tracked repo. */
 export const DEFAULT_REPO = { owner: "MeperDonas", name: "MeperPOS" } as const;
+
+/** Read-path default repo id (`owner/name`) used when no active repo has been
+ * selected. Mirrors `DEFAULT_REPO` so the board/backlog fall back to the same
+ * repo the connector would sync by default. */
+export const DEFAULT_REPO_ID: RepoId = `${DEFAULT_REPO.owner}/${DEFAULT_REPO.name}`;
 
 export interface SyncOptions {
   owner?: string;

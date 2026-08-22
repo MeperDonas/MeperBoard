@@ -24,6 +24,13 @@ export const githubItemRepo = {
     return db.github_items.toArray();
   },
 
+  /** All mirrored items for a single repo (`where("repo").equals(repo)`, using
+   * the `repo` index declared in the schema). This is the read-path filter that
+   * keeps board/backlog scoped to the active repo. */
+  getAllByRepo(repo: RepoId): Promise<GithubItem[]> {
+    return db.github_items.where("repo").equals(repo).toArray();
+  },
+
   async setColumnOverride(repo: RepoId, number: number, column_id: string): Promise<void> {
     await db.column_overrides.put({ repo, number, column_id });
   },

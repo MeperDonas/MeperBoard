@@ -7,7 +7,7 @@ vi.mock("next/link", () => ({
     React.createElement("a", { href }, children),
 }));
 
-import { githubItemRepo, localItemRepo } from "../../data/repositories";
+import { githubItemRepo, localItemRepo, repoRepo } from "../../data/repositories";
 import {
   loadLocalCardsCollapsed,
   saveLocalCardsCollapsed,
@@ -107,6 +107,7 @@ describe("BoardWorkspace", () => {
   });
 
   it("renders local and GitHub cards together on the board", async () => {
+    await repoRepo.setActive("meperdonas", "meperboard");
     await localItemRepo.upsert(makeLocalItem({ id: "l1", title: "Buy milk", column_id: "todo" }));
     await githubItemRepo.upsert(makeGithubItem({ number: 1, state: "open", title: "Fix login" }));
 
@@ -127,6 +128,7 @@ describe("Local cards rail", () => {
   });
 
   it("renders stat pills per kind with a stable test id", async () => {
+    await repoRepo.setActive("meperdonas", "meperboard");
     await githubItemRepo.upsert(makeGithubItem({ number: 1, state: "open", title: "Fix login" }));
     await githubItemRepo.upsert(
       makeGithubItem({ number: 2, kind: "pull", state: "open", title: "Update deps" }),

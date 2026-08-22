@@ -1,7 +1,7 @@
 import { renderHook, waitFor } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { githubItemRepo, localItemRepo } from "../data/repositories";
+import { githubItemRepo, localItemRepo, repoRepo } from "../data/repositories";
 import {
   createTestQueryClient,
   makeGithubItem,
@@ -16,7 +16,12 @@ describe("useBacklog", () => {
 
   beforeEach(async () => {
     await resetDb();
+    await repoRepo.setActive("meperdonas", "meperboard");
     client = createTestQueryClient();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   it("returns the full mixed list on success", async () => {
@@ -52,11 +57,24 @@ describe("useBacklog", () => {
   });
 
   it("surfaces an error when reading the store fails", async () => {
-    vi.spyOn(githubItemRepo, "getAll").mockRejectedValueOnce(new Error("boom"));
+    vi.spyOn(githubItemRepo, "getAllByRepo").mockRejectedValue(new Error("boom"));
 
     const { result } = renderHook(() => useBacklog(), { wrapper: queryWrapper(client) });
 
     await waitFor(() => expect(result.current.isError).toBe(true));
     expect(result.current.error).toBeInstanceOf(Error);
+  });
+
+  it("filters github items to the active repo when a repo is selected", async () => {
+    await githubItemRepo.upsert(makeGithubItem({ repo: "meperdonas/meperboard", number: 1 }));
+    await githubItemRepo.upsert(makeGithubItem({ repo: "acme/widgets", number: 1 }));
+    await repoRepo.setActive("meperdonas", "meperboard");
+
+    const { result } = renderHook(() => useBacklog(), { wrapper: queryWrapper(client) });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    expect(result.current.data).toHaveLength(1);
+    expect(result.current.data![0].repo).toBe("meperdonas/meperboard");
   });
 });
