@@ -99,32 +99,16 @@ describe("BoardWorkspace", () => {
     }
   });
 
-  it("persists a local card move through the board", async () => {
+  it("renders local and GitHub cards together on the board", async () => {
     await localItemRepo.upsert(makeLocalItem({ id: "l1", title: "Buy milk", column_id: "todo" }));
-
-    renderWorkspace();
-
-    await waitFor(() => expect(screen.getByText("Buy milk")).toBeInTheDocument());
-
-    fireEvent.click(screen.getByRole("button", { name: "Move Buy milk right" }));
-
-    await waitFor(async () =>
-      expect((await localItemRepo.get("l1"))?.column_id).toBe("doing"),
-    );
-  });
-
-  it("persists a GitHub card move as a column override", async () => {
     await githubItemRepo.upsert(makeGithubItem({ number: 1, state: "open", title: "Fix login" }));
 
     renderWorkspace();
 
-    await waitFor(() => expect(screen.getByText("Fix login")).toBeInTheDocument());
-
-    fireEvent.click(screen.getByRole("button", { name: "Move Fix login right" }));
-
-    await waitFor(async () =>
-      expect(await githubItemRepo.getColumnOverride("meperdonas/meperboard", 1)).toBe("in-review"),
-    );
+    await waitFor(() => {
+      expect(within(columnSection("To Do")).getByText("Buy milk")).toBeInTheDocument();
+      expect(within(columnSection("Backlog")).getByText("Fix login")).toBeInTheDocument();
+    });
   });
 });
 

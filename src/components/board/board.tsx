@@ -17,8 +17,6 @@ import {
   AlertTriangle,
   GripVertical,
   Inbox,
-  MoveLeft,
-  MoveRight,
 } from "lucide-react";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 
@@ -29,7 +27,7 @@ import { useBoard, type Board, type BoardColumn as BoardColumnType, type Card } 
 import { Badge } from "../ui/badge";
 import { CardMetaRow } from "../ui/card-meta";
 import { MoveToast, type MoveToastState } from "./move-toast";
-import { adjacentColumnId, applyMoves, resolveMove, type BoardMove } from "./move";
+import { applyMoves, resolveMove, type BoardMove } from "./move";
 
 export type { BoardMove } from "./move";
 
@@ -38,10 +36,6 @@ export interface BoardProps {
   onMoveCard?: (move: BoardMove) => void;
 }
 
-/** DragOverlay ghost lift relative to its resting size (≤ ~1.03 keeps text crisp). */
-const GHOST_SCALE = 1.03;
-/** Slight ghost tilt in degrees — reads as "picked up", never cartoonish. */
-const GHOST_TILT_DEG = 1.5;
 /** How long the landing accent-ring pulse fades out (~300ms per round 3 spec). */
 const LANDING_PULSE_MS = 300;
 /** Mid-flight scale dip duration: content settles from slightly small onto landing. */
@@ -77,8 +71,6 @@ export function Board({ onMoveCard }: BoardProps) {
   const [flight, setFlight] = useState<{ cardId: string; key: number } | null>(null);
   const dismissToast = useCallback(() => setToast(null), []);
 
-  // Landing feedback timers: the accent ring (~300ms fade) and the mid-flight
-  // scale dip both self-clear — nodes unmount, nothing lingers in the DOM.
   useEffect(() => {
     if (!pulse && !flight) return;
     const timer = setTimeout(
@@ -116,9 +108,6 @@ export function Board({ onMoveCard }: BoardProps) {
     if (!reduceMotion && move.toColumnId !== move.fromColumnId) {
       const key = Date.now();
       setPulse({ columnId: move.toColumnId, key });
-      // Owned at Board level on purpose: the moving card unmounts from its
-      // old column and mounts into the new one, so per-card refs would reset
-      // and never detect the crossing.
       setFlight({ cardId, key });
     }
     const title = findCard(effective, cardId)?.title ?? "card";
@@ -142,14 +131,6 @@ export function Board({ onMoveCard }: BoardProps) {
     handleMove(String(active.id), String(over.id));
   }
 
-  function handleMoveRelative(cardId: string, delta: -1 | 1) {
-    const card = findCard(effective, cardId);
-    if (!card) return;
-    const currentColumnId = moves[cardId] ?? card.columnId;
-    const target = adjacentColumnId(effective.columns, currentColumnId, delta);
-    if (target) handleMove(cardId, target);
-  }
-
   return (
     <DndContext
       sensors={sensors}
@@ -167,7 +148,7 @@ export function Board({ onMoveCard }: BoardProps) {
                 column={column}
                 pulse={pulse}
                 flight={flight}
-                onMoveRelative={handleMoveRelative}
+                isDraggingActive={Boolean(activeId)}
                 reduceMotion={reduceMotion}
               />
             ))}
@@ -186,13 +167,13 @@ function BoardColumn({
   column,
   pulse,
   flight,
-  onMoveRelative,
+  isDraggingActive,
   reduceMotion,
 }: {
   column: BoardColumnType;
   pulse: { columnId: string; key: number } | null;
   flight: { cardId: string; key: number } | null;
-  onMoveRelative: (cardId: string, delta: -1 | 1) => void;
+  isDraggingActive: boolean;
   reduceMotion: boolean;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: column.id });
@@ -206,31 +187,35 @@ function BoardColumn({
       data-column-id={column.id}
       aria-label={`${column.title} column`}
       className={cn(
-        "relative flex h-full max-h-full w-72 shrink-0 flex-col rounded-xl border bg-card p-2 transition-colors duration-150",
-        isOver && "border-primary/60 bg-primary/5 ring-1 ring-primary/30",
+        "relative flex h-full max-h-full w-72 shrink-0 flex-col rounded-xl border bg-card/75 backdrop-blur-xs p-2.5 transition-all duration-200",
+        isOver
+          ? "border-primary ring-2 ring-primary/30 bg-primary/[0.04] shadow-lg shadow-primary/5"
+          : "border-border hover:border-foreground/15",
       )}
     >
       {pulse != null && pulse.columnId === column.id && !reduceMotion && (
-        // Landing accent pulse (~300ms fade). Mount-only animation: the node
-        // unmounts when the timer clears it — no lingering exit in the DOM.
         <motion.div
           key={pulse.key}
           aria-hidden="true"
-          initial={{ opacity: 0.85 }}
-          animate={{ opacity: 0 }}
+          initial={{ opacity: 0.9, scale: 0.99 }}
+          animate={{ opacity: 0, scale: 1 }}
           transition={{ duration: LANDING_PULSE_MS / 1000, ease: "easeOut" }}
-          className="pointer-events-none absolute inset-0 z-10 rounded-xl ring-2 ring-primary/60"
+          className="pointer-events-none absolute inset-0 z-10 rounded-xl ring-2 ring-primary shadow-lg shadow-primary/20"
         />
       )}
       <header className="flex items-center justify-between px-2 py-1.5">
-        <h2 className="text-sm font-medium tracking-tight">{column.title}</h2>
+        <div className="flex items-center gap-2">
+          <h2 className="text-sm font-semibold tracking-tight">{column.title}</h2>
+        </div>
         <span
           title={overWip ? `More than ${MAX_WIP_PER_COLUMN} cards in this column` : undefined}
           className={cn(
-            "inline-flex items-center gap-1 min-w-6 rounded-full px-2 py-0.5 text-center text-xs tabular-nums",
+            "inline-flex items-center gap-1 min-w-6 rounded-full px-2 py-0.5 text-center text-xs tabular-nums transition-colors duration-150",
             overWip
               ? "border border-warning/30 bg-warning/10 text-warning"
-              : "bg-muted text-muted-foreground",
+              : isOver
+                ? "bg-primary/20 text-primary font-medium"
+                : "bg-muted text-muted-foreground",
           )}
         >
           {overWip && (
@@ -242,9 +227,9 @@ function BoardColumn({
           {total}
         </span>
       </header>
-      <ul className="flex flex-1 min-h-0 flex-col gap-2 overflow-y-auto pr-0.5 no-scrollbar">
-        {column.cards.length === 0 ? (
-          <li className="flex items-center justify-center rounded-lg border border-dashed py-8">
+      <ul className="flex flex-1 min-h-0 flex-col gap-2.5 overflow-y-auto pr-0.5 no-scrollbar py-1">
+        {column.cards.length === 0 && !isOver ? (
+          <li className="flex items-center justify-center rounded-lg border border-dashed py-8 transition-colors">
             <span className="text-xs text-muted-foreground">No cards</span>
           </li>
         ) : (
@@ -253,10 +238,20 @@ function BoardColumn({
               key={card.id}
               card={card}
               dipping={flight?.cardId === card.id}
-              onMoveRelative={onMoveRelative}
               reduceMotion={reduceMotion}
             />
           ))
+        )}
+        {isOver && isDraggingActive && (
+          <motion.li
+            initial={{ opacity: 0, scale: 0.95, height: 0 }}
+            animate={{ opacity: 1, scale: 1, height: "auto" }}
+            exit={{ opacity: 0, scale: 0.95, height: 0 }}
+            transition={{ duration: 0.15 }}
+            className="flex items-center justify-center rounded-lg border-2 border-dashed border-primary/50 bg-primary/10 py-4 text-xs font-medium text-primary shadow-xs"
+          >
+            Drop here
+          </motion.li>
         )}
       </ul>
     </section>
@@ -266,63 +261,55 @@ function BoardColumn({
 function BoardCard({
   card,
   dipping,
-  onMoveRelative,
   reduceMotion,
 }: {
   card: Card;
-  /** True while this card is mid-flight to another column (Board-owned). */
   dipping: boolean;
-  onMoveRelative: (cardId: string, delta: -1 | 1) => void;
   reduceMotion: boolean;
 }) {
-  const { attributes, listeners, setNodeRef, setActivatorNodeRef, isDragging } = useDraggable({
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: card.id,
   });
 
   return (
-    // Shared layoutId lets framer-motion fly the card between columns with a
-    // tuned spring; reduced-motion users get an instant swap instead.
     <motion.li
       ref={setNodeRef}
       layoutId={reduceMotion ? undefined : card.id}
       transition={reduceMotion ? { duration: 0 } : SPRING_CARD_FLIGHT}
-      initial={reduceMotion ? false : { opacity: 0 }}
-      animate={{ opacity: 1 }}
+      initial={reduceMotion ? false : { opacity: 0, y: 6 }}
+      animate={{ opacity: 1, y: 0 }}
+      {...listeners}
+      {...attributes}
       className={cn(
-        "group rounded-lg border bg-elevated p-3 text-card-foreground shadow-xs transition-colors duration-150 hover:border-foreground/20",
-        isDragging && "opacity-40 shadow-lg",
+        "group relative cursor-grab rounded-lg border bg-elevated p-3 text-card-foreground shadow-xs transition-all duration-200 ease-out select-none active:cursor-grabbing",
+        "hover:-translate-y-0.5 hover:shadow-md hover:border-primary/40 hover:bg-elevated/90",
+        isDragging && "opacity-25 border-dashed border-primary/60 scale-[0.98] shadow-inner",
       )}
     >
       <motion.div
-        // `flight` only exists when reduced motion is off (Board gates it),
-        // so a true `dipping` here always means "play the dip".
         animate={dipping ? { scale: FLIGHT_DIP_KEYFRAMES } : { scale: 1 }}
         transition={SPRING_CARD_FLIGHT}
         style={{ transformOrigin: "center top" }}
       >
-        <div className="flex items-start gap-2">
-          <button
-            ref={setActivatorNodeRef}
-            {...listeners}
-            {...attributes}
-            type="button"
-            aria-label={`Drag ${card.title}`}
-            className="mt-0.5 shrink-0 cursor-grab rounded text-muted-foreground opacity-0 transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100 hover:text-foreground active:cursor-grabbing"
+        <div className="flex items-start gap-2.5">
+          <span
+            aria-hidden="true"
+            className="mt-0.5 shrink-0 text-muted-foreground/60 transition-colors duration-150 group-hover:text-primary"
           >
-            <GripVertical className="h-4 w-4" aria-hidden="true" />
-          </button>
+            <GripVertical className="h-4 w-4" />
+          </span>
 
           <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-medium leading-snug" title={card.title}>
+            <p className="text-sm font-medium leading-snug tracking-tight text-foreground transition-colors group-hover:text-primary" title={card.title}>
               {card.title}
             </p>
             <div className="mt-2 flex w-full items-center gap-2">
               <CardMetaRow card={card} />
             </div>
             {card.labels.length > 0 && (
-              <div className="mt-1.5 flex flex-wrap items-center gap-1">
+              <div className="mt-2 flex flex-wrap items-center gap-1">
                 {card.labels.map((label) => (
-                  <Badge key={label} variant="outline">
+                  <Badge key={label} variant="outline" className="transition-colors group-hover:border-primary/30">
                     {label}
                   </Badge>
                 ))}
@@ -330,60 +317,43 @@ function BoardCard({
             )}
           </div>
         </div>
-
-        <div className="mt-2 flex items-center gap-1 border-t pt-2 opacity-0 transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100">
-          <button
-            type="button"
-            aria-label={`Move ${card.title} left`}
-            onClick={() => onMoveRelative(card.id, -1)}
-            className="rounded-md p-1 text-muted-foreground transition-colors duration-150 hover:bg-muted hover:text-foreground"
-          >
-            <MoveLeft className="h-4 w-4" aria-hidden="true" />
-          </button>
-          <button
-            type="button"
-            aria-label={`Move ${card.title} right`}
-            onClick={() => onMoveRelative(card.id, 1)}
-            className="rounded-md p-1 text-muted-foreground transition-colors duration-150 hover:bg-muted hover:text-foreground"
-          >
-            <MoveRight className="h-4 w-4" aria-hidden="true" />
-          </button>
-        </div>
       </motion.div>
     </motion.li>
   );
 }
 
-/**
- * Lifted ghost that follows the cursor during a drag (non-interactive). It
- * lifts to ~1.03x with an elevation-3 shadow and a slight tilt so it reads as
- * physically picked up; reduced-motion users get a static ghost.
- */
 function GhostCard({ card, reduceMotion }: { card: Card; reduceMotion: boolean }) {
   return (
     <motion.div
       aria-hidden="true"
       initial={reduceMotion ? false : { scale: 1, rotate: 0 }}
       animate={{
-        scale: reduceMotion ? 1 : GHOST_SCALE,
-        rotate: reduceMotion ? 0 : GHOST_TILT_DEG,
+        scale: reduceMotion ? 1 : 1.05,
+        rotate: reduceMotion ? 0 : 2.5,
       }}
       transition={reduceMotion ? { duration: 0 } : SPRING_GHOST_LIFT}
-      className="w-72 cursor-grabbing rounded-lg border bg-elevated p-3 text-card-foreground shadow-lg ring-1 ring-primary/30"
+      className="w-72 cursor-grabbing rounded-lg border-2 border-primary/60 bg-elevated/95 p-3.5 text-card-foreground shadow-2xl backdrop-blur-xl ring-2 ring-primary/40"
     >
-      <p className="truncate text-sm font-medium leading-snug">{card.title}</p>
-      <div className="mt-2 flex w-full items-center gap-2">
-        <CardMetaRow card={card} />
-      </div>
-      {card.labels.length > 0 && (
-        <div className="mt-1.5 flex flex-wrap items-center gap-1">
-          {card.labels.map((label) => (
-            <Badge key={label} variant="outline">
-              {label}
-            </Badge>
-          ))}
+      <div className="flex items-start gap-2.5">
+        <span className="mt-0.5 shrink-0 text-primary">
+          <GripVertical className="h-4 w-4" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-medium leading-snug tracking-tight text-primary">{card.title}</p>
+          <div className="mt-2 flex w-full items-center gap-2">
+            <CardMetaRow card={card} />
+          </div>
+          {card.labels.length > 0 && (
+            <div className="mt-2 flex flex-wrap items-center gap-1">
+              {card.labels.map((label) => (
+                <Badge key={label} variant="outline" className="border-primary/40">
+                  {label}
+                </Badge>
+              ))}
+            </div>
+          )}
         </div>
-      )}
+      </div>
     </motion.div>
   );
 }

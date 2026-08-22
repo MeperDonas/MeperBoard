@@ -73,51 +73,14 @@ describe("Board", () => {
     }
   });
 
-  it("moves a card to an adjacent column via the keyboard move controls", async () => {
-    const onMoveCard = vi.fn();
-    await localItemRepo.upsert(makeLocalItem({ id: "l1", title: "Buy milk", column_id: "todo" }));
-
-    renderBoard({ onMoveCard });
-
-    await waitFor(() => expect(screen.getByText("Buy milk")).toBeInTheDocument());
-
-    // To Do is column index 4; moving right targets Doing (index 5).
-    fireEvent.click(screen.getByRole("button", { name: "Move Buy milk right" }));
-
-    await waitFor(() =>
-      expect(within(columnSection("Doing")).getByText("Buy milk")).toBeInTheDocument(),
-    );
-
-    expect(onMoveCard).toHaveBeenCalledWith({
-      cardId: "local:l1",
-      fromColumnId: "todo",
-      toColumnId: "doing",
-    });
-  });
-
-  it("does not move a card past the first column", async () => {
-    const onMoveCard = vi.fn();
-    await githubItemRepo.upsert(makeGithubItem({ number: 1, state: "open", title: "Fix login" }));
-
-    renderBoard({ onMoveCard });
-
-    await waitFor(() => expect(screen.getByText("Fix login")).toBeInTheDocument());
-
-    // The issue is in Backlog (first column), so "move left" is a no-op.
-    fireEvent.click(screen.getByRole("button", { name: "Move Fix login left" }));
-
-    expect(onMoveCard).not.toHaveBeenCalled();
-    expect(within(columnSection("Backlog")).getByText("Fix login")).toBeInTheDocument();
-  });
-
-  it("exposes a drag handle with dnd-kit accessible wiring", async () => {
+  it("exposes draggable cards with dnd-kit accessible wiring", async () => {
     await githubItemRepo.upsert(makeGithubItem({ number: 1, state: "open", title: "Fix login" }));
 
     renderBoard();
 
     await waitFor(() => expect(screen.getByText("Fix login")).toBeInTheDocument());
 
-    const handle = screen.getByRole("button", { name: "Drag Fix login" });
-    expect(handle).toHaveAttribute("aria-roledescription", "draggable");
+    const card = screen.getByText("Fix login").closest("li") as HTMLElement;
+    expect(card).toHaveAttribute("aria-roledescription", "draggable");
   });
 });
