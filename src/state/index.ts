@@ -24,6 +24,12 @@ export { queryKeys } from "./query-keys";
 export { useBoard } from "./useBoard";
 export { useBacklog } from "./useBacklog";
 export { useIssueDetail } from "./useIssueDetail";
+export {
+  useActiveRepo,
+  useSetActiveRepo,
+  useUserRepos,
+  type RepoRef,
+} from "./use-repos";
 export { DEFAULT_REPO, proxyFetcher, useSync, type SyncOptions } from "./useSync";
 export { useLocalCards, type LocalCardInput, type LocalCardsOptions } from "./useLocalCards";
 export { useMoveCard, useResetCardMove } from "./useMoveCard";

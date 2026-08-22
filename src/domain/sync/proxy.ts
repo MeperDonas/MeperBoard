@@ -70,10 +70,16 @@ export function isAllowedOrigin(
 /**
  * Path allowlist. The relay is a thin read-only GitHub proxy that only exposes
  * the sync paths the app needs: `repos/{owner}/{repo}/issues` and
- * `repos/{owner}/{repo}/pulls` (plus their single-item variants). Anything else
- * — including `user/repos` — is rejected.
+ * `repos/{owner}/{repo}/pulls` (plus their single-item variants), and the two
+ * paths the RepoSwitcher needs: `user/repos` (live repo list) and `user`
+ * (profile). Nothing else is allowed — the relay is not re-opened to arbitrary
+ * paths.
  */
 export function isAllowedPath(path: string[]): boolean {
+  // RepoSwitcher endpoints: `user` and `user/repos` (exactly, no deeper).
+  if (path.length === 1 && path[0] === "user") return true;
+  if (path.length === 2 && path[0] === "user" && path[1] === "repos") return true;
+
   if (path.length < 2 || path[0] !== "repos") return false;
   const resource = path[3];
   if (resource !== "issues" && resource !== "pulls") return false;

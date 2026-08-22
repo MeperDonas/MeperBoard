@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 
 import { db } from "./db";
-import { columnRepo, epicRepo, githubItemRepo, localItemRepo } from "./repositories";
+import { columnRepo, epicRepo, githubItemRepo, localItemRepo, repoRepo } from "./repositories";
 import type { GithubItem, LocalItem } from "./types";
 
 function githubItem(overrides: Partial<GithubItem> = {}): GithubItem {
@@ -146,5 +146,45 @@ describe("epicRepo", () => {
     const all = await epicRepo.getAll();
     expect(all).toHaveLength(1);
     expect(all[0].title).toBe("Expenses 2026");
+  });
+});
+
+describe("repoRepo", () => {
+  beforeEach(async () => {
+    await db.delete();
+    await db.open();
+  });
+
+  it("upserts a known repo idempotently by id", async () => {
+    await repoRepo.upsert({ id: "meperdonas/meperboard", owner: "meperdonas", name: "meperboard", last_sync_at: null });
+    await repoRepo.upsert({ id: "meperdonas/meperboard", owner: "meperdonas", name: "meperboard", last_sync_at: "2026-08-01T00:00:00Z" });
+
+    const all = await repoRepo.listAll();
+    expect(all).toHaveLength(1);
+    expect(all[0]).toMatchObject({ id: "meperdonas/meperboard", last_sync_at: "2026-08-01T00:00:00Z" });
+  });
+
+  it("persists a single active repo and returns it", async () => {
+    await repoRepo.setActive("meperdonas", "meperboard");
+
+    const active = await repoRepo.getActive();
+    expect(active).toMatchObject({ owner: "meperdonas", name: "meperboard" });
+  });
+
+  it("switching the active repo replaces the previous active flag", async () => {
+    await repoRepo.setActive("meperdonas", "meperboard");
+    await repoRepo.setActive("acme", "widgets");
+
+    const active = await repoRepo.getActive();
+    expect(active).toMatchObject({ owner: "acme", name: "widgets" });
+
+    // The previously active repo is now a plain known repo, no longer active.
+    const all = await repoRepo.listAll();
+    expect(all).toHaveLength(2);
+    expect(all.map((repo) => repo.id).sort()).toEqual(["acme/widgets", "meperdonas/meperboard"]);
+  });
+
+  it("returns undefined for getActive when no repo was marked", async () => {
+    expect(await repoRepo.getActive()).toBeUndefined();
   });
 });

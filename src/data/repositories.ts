@@ -1,5 +1,5 @@
 import { db } from "./db";
-import type { Column, ColumnOverride, Epic, GithubItem, LocalItem, RepoId } from "./types";
+import type { Column, ColumnOverride, Epic, GithubItem, LocalItem, Repo, RepoId } from "./types";
 
 /**
  * Repository for the read-only `github_items` mirror and its `column_overrides`.
@@ -92,5 +92,39 @@ export const epicRepo = {
 
   getAll(): Promise<Epic[]> {
     return db.epics.toArray();
+  },
+};
+
+/**
+ * Repository for the `repos` table (the declared-but-unused store of known
+ * repositories and, since the RepoSwitcher, the single active repo).
+ *
+ * The active repo is tracked with an `is_active` flag on the row keyed by its
+ * `id` (the `owner/name` RepoId). `setActive` clears every other row's flag so
+ * exactly one repo is active at a time. Repo ids stay coherent with
+ * `github_items.repo` (`owner/name`).
+ */
+export const repoRepo = {
+  /** Upsert a known repository (idempotent by `owner/name` id). */
+  async upsert(repo: Repo): Promise<void> {
+    await db.repos.put(repo);
+  },
+
+  /** Mark one repo active; every other repo row loses its active flag. */
+  async setActive(owner: string, name: string): Promise<Repo> {
+    await db.repos.filter((repo) => repo.is_active === true).modify({ is_active: false });
+    const repo: Repo = { id: `${owner}/${name}`, owner, name, last_sync_at: null, is_active: true };
+    await db.repos.put(repo);
+    return repo;
+  },
+
+  /** The currently active repo, or `undefined` when none has been selected. */
+  getActive(): Promise<Repo | undefined> {
+    return db.repos.filter((repo) => repo.is_active === true).first();
+  },
+
+  /** All known repos. */
+  listAll(): Promise<Repo[]> {
+    return db.repos.toArray();
   },
 };

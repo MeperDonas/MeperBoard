@@ -12,8 +12,7 @@ import {
   RefreshCw,
   Search,
   Sun,
-} from "lucide-react";
-import {
+} from "lucide-react";import {
   useCallback,
   useEffect,
   useId,
@@ -37,6 +36,7 @@ import {
 } from "../../lib/themes";
 import { useSync } from "../../state";
 import { GithubMark } from "./github-mark";
+import { OPEN_REPO_SWITCHER_EVENT } from "./repo-switcher";
 import { useAuth, type AuthUser } from "./use-auth";
 
 /** Cross-component signal the palette emits; the board toggles its local rail on it. */
@@ -117,6 +117,10 @@ export function CommandPalette() {
     window.dispatchEvent(new CustomEvent(TOGGLE_LOCAL_CARDS_EVENT));
   }, []);
 
+  const switchRepo = useCallback(() => {
+    window.dispatchEvent(new CustomEvent(OPEN_REPO_SWITCHER_EVENT));
+  }, []);
+
   // Global shortcut + Escape handling. Mounted for the whole header so ⌘K works
   // while the palette is closed; Escape only closes when it is open.
   useEffect(() => {
@@ -152,8 +156,9 @@ export function CommandPalette() {
         navigate,
         syncNow: () => sync.mutate(),
         toggleLocalCards,
+        switchRepo,
       }),
-    [user, login, logout, navigate, sync, toggleLocalCards],
+    [user, login, logout, navigate, sync, toggleLocalCards, switchRepo],
   );
 
   const visibleCommands = useMemo<Command[]>(() => {
@@ -393,6 +398,7 @@ interface BuildCommandsArgs {
   navigate: (href: string) => void;
   syncNow: () => void;
   toggleLocalCards: () => void;
+  switchRepo: () => void;
 }
 
 const THEME_ICONS: Record<ThemePreference, LucideIcon> = { dark: Moon, light: Sun };
@@ -404,6 +410,7 @@ function buildCommands({
   navigate,
   syncNow,
   toggleLocalCards,
+  switchRepo,
 }: BuildCommandsArgs): Command[] {
   const commands: Command[] = [
     {
@@ -477,8 +484,8 @@ function buildCommands({
     group: "Auth",
     label: "Switch repository",
     keywords: "repo repository switch",
-    disabled: true,
-    hint: "Live repo switcher arrives with the next release",
+    icon: FolderGit2,
+    run: () => switchRepo(),
   });
 
   commands.push(
