@@ -8,6 +8,7 @@ import { cn } from "../../lib/utils";
 import { AuthButton } from "./auth-button";
 import { CommandPalette } from "./command-palette";
 import { PalettePicker } from "./palette-picker";
+import { RepoSwitcher } from "./repo-switcher";
 import { ThemeToggle } from "./theme-toggle";
 
 const NAV_ITEMS = [
@@ -77,6 +78,7 @@ export function AppHeader() {
           <ThemeToggle />
         </div>
       </nav>
+      <RepoSwitcher />
     </header>
   );
 }

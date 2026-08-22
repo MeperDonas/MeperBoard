@@ -1,7 +1,8 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { createTestQueryClient, queryWrapper } from "../../state/test-utils";
+import { repoRepo } from "../../data/repositories";
+import { createTestQueryClient, queryWrapper, resetDb } from "../../state/test-utils";
 import { AppHeader } from "./app-header";
 import { AuthButton } from "./auth-button";
 
@@ -117,6 +118,25 @@ describe("AuthButton", () => {
     fireEvent.click(await screen.findByRole("menuitem", { name: /disconnect/i }));
 
     expect(await screen.findByRole("button", { name: /connect github/i })).toBeInTheDocument();
+  });
+
+  it("shows the persisted active repo and opens the switcher from the account menu", async () => {
+    await resetDb();
+    await repoRepo.setActive("acme", "widgets");
+    const dispatch = vi.spyOn(window, "dispatchEvent");
+    mockFetch({ "/api/auth/me": () => jsonResponse(account) });
+
+    render(<AuthButton />, { wrapper: queryWrapper(client) });
+
+    fireEvent.click(await screen.findByRole("button", { name: /account for meperdonas/i }));
+
+    expect(await screen.findByText("acme/widgets")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("menuitem", { name: /switch repository/i }));
+
+    expect(dispatch).toHaveBeenCalledWith(
+      expect.objectContaining({ type: "meperboard:open-repo-switcher" }),
+    );
   });
 
   it("shows a loading state while the session check resolves", async () => {
