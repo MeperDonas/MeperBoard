@@ -35,6 +35,27 @@ function setCookies(response: Response): string[] {
   return response.headers.getSetCookie();
 }
 
+/** GitHub `GET /rate_limit` payload shape (the `core` resource is the one forwarded). */
+const GITHUB_RATE_LIMIT = {
+  resources: { core: { limit: 5000, remaining: 4321, reset: 1725000000 } },
+};
+
+/** Stub the global fetch for the auth routes; returns the mock for call inspection. */
+function stubFetch(handler?: (url: string, init: RequestInit) => Response | Promise<Response>) {
+  const mock = vi.fn((url: string, init: RequestInit) =>
+    Promise.resolve(
+      handler
+        ? handler(url, init)
+        : new Response(JSON.stringify(GITHUB_RATE_LIMIT), {
+            status: 200,
+            headers: { "content-type": "application/json" },
+          }),
+    ),
+  );
+  vi.stubGlobal("fetch", mock);
+  return mock;
+}
+
 afterEach(() => {
   vi.unstubAllEnvs();
   vi.unstubAllGlobals();
@@ -249,7 +270,7 @@ describe("/api/auth/logout", () => {
 
   it("clears the __session cookie and returns ok", async () => {
     stubAuthEnv();
-    vi.stubGlobal("fetch", vi.fn(() => Promise.resolve(new Response(null, { status: 204 }))));
+    stubFetch(() => new Response(null, { status: 204 }));
 
     const jwe = await buildSessionJwe(
       createSession({ token: "ghu_1", refresh_token: "ghr_1", login: "meperdonas", avatar_url: "u" }),
@@ -266,6 +287,50 @@ describe("/api/auth/logout", () => {
     expect(cleared).toBeTruthy();
   });
 
+  it("attempts best-effort revocation against the token/delete endpoint with the user access token", async () => {
+    stubAuthEnv();
+    const fetchMock = stubFetch(() => new Response(null, { status: 204 }));
+
+    const jwe = await buildSessionJwe(
+      createSession({ token: "ghu_1", refresh_token: "ghr_1", login: "meperdonas", avatar_url: "u" }),
+      SECRET,
+    );
+    const res = await logout.POST(
+      authRequest("http://localhost:3000/api/auth/logout", { cookie: `__session=${jwe}` }),
+    );
+
+    expect(res.status).toBe(200);
+    expect((await res.json()).ok).toBe(true);
+
+    const revokeCall = fetchMock.mock.calls.find(([url]) => url.includes("/token/delete")) as
+      | [string, RequestInit]
+      | undefined;
+    expect(revokeCall).toBeTruthy();
+    expect(revokeCall![1].method).toBe("POST");
+    const body = JSON.parse(revokeCall![1].body as string);
+    expect(body).toEqual({ client_id: CLIENT_ID, access_token: "ghu_1" });
+
+    // The cookie is always cleared even when revocation ran.
+    expect(setCookies(res).some((c) => c.startsWith("__session=") && c.includes("Max-Age=0"))).toBe(true);
+  });
+
+  it("still clears the cookie and returns ok when revocation fails", async () => {
+    stubAuthEnv();
+    stubFetch(() => Promise.reject(new Error("network down")));
+
+    const jwe = await buildSessionJwe(
+      createSession({ token: "ghu_1", refresh_token: "ghr_1", login: "meperdonas", avatar_url: "u" }),
+      SECRET,
+    );
+    const res = await logout.POST(
+      authRequest("http://localhost:3000/api/auth/logout", { cookie: `__session=${jwe}` }),
+    );
+
+    expect(res.status).toBe(200);
+    expect((await res.json()).ok).toBe(true);
+    expect(setCookies(res).some((c) => c.startsWith("__session=") && c.includes("Max-Age=0"))).toBe(true);
+  });
+
   it("still returns ok and clears the cookie when there is no session", async () => {
     stubAuthEnv();
     const res = await logout.POST(authRequest("http://localhost:3000/api/auth/logout"));
@@ -280,8 +345,9 @@ describe("/api/auth/me", () => {
     expect((me as unknown as Record<string, string>).runtime).toBe("nodejs");
   });
 
-  it("returns the public profile without exposing the token when the cookie is valid", async () => {
+  it("returns the public profile with rate_limit without exposing the token when the cookie is valid", async () => {
     stubAuthEnv();
+    const fetchMock = stubFetch();
     const jwe = await buildSessionJwe(
       createSession({
         token: "ghu_secret",
@@ -299,6 +365,37 @@ describe("/api/auth/me", () => {
     expect(parsed.avatar_url).toBe("https://avatars.example/meperdonas.png");
     expect(parsed.token).toBeUndefined();
     expect(parsed.refresh_token).toBeUndefined();
+    expect(parsed.rate_limit).toMatchObject({ remaining: 4321, resetAt: 1725000000 });
+
+    // The rate-limit probe used the user's token as a Bearer and hit /rate_limit.
+    const rateLimitCall = fetchMock.mock.calls.find(
+      ([url]) => url === "https://api.github.com/rate_limit",
+    ) as [string, RequestInit] | undefined;
+    expect(rateLimitCall).toBeTruthy();
+    expect(new Headers(rateLimitCall![1].headers as HeadersInit).get("Authorization")).toBe(
+      "Bearer ghu_secret",
+    );
+  });
+
+  it("returns rate_limit null when the GitHub rate-limit call fails", async () => {
+    stubAuthEnv();
+    vi.stubGlobal("fetch", vi.fn(() => Promise.reject(new Error("rate limit service down"))));
+
+    const jwe = await buildSessionJwe(
+      createSession({
+        token: "ghu_secret",
+        refresh_token: "ghr_secret",
+        login: "meperdonas",
+        avatar_url: "https://avatars.example/meperdonas.png",
+      }),
+      SECRET,
+    );
+    const res = await me.GET(authRequest("http://localhost:3000/api/auth/me", { cookie: `__session=${jwe}` }));
+
+    expect(res.status).toBe(200);
+    const parsed = (await res.json()) as Record<string, unknown>;
+    expect(parsed.login).toBe("meperdonas");
+    expect(parsed.rate_limit).toBeNull();
   });
 
   it("returns 401 when there is no session cookie", async () => {

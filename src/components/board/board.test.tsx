@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { githubItemRepo, localItemRepo } from "../../data/repositories";
+import { githubItemRepo, localItemRepo, repoRepo } from "../../data/repositories";
 import {
   createTestQueryClient,
   makeGithubItem,
@@ -26,6 +26,7 @@ function columnSection(title: string): HTMLElement {
 describe("Board", () => {
   beforeEach(async () => {
     await resetDb();
+    await repoRepo.setActive("meperdonas", "meperboard");
   });
 
   it("renders ordered columns with cards resolved from useBoard", async () => {

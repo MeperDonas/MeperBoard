@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it } from "vitest";
 
-import { githubItemRepo, localItemRepo } from "../../data/repositories";
+import { githubItemRepo, localItemRepo, repoRepo } from "../../data/repositories";
 import {
   createTestQueryClient,
   makeGithubItem,
@@ -34,6 +34,7 @@ function titles(): (string | null)[] {
 describe("Backlog", () => {
   beforeEach(async () => {
     await resetDb();
+    await repoRepo.setActive("meperdonas", "meperboard");
   });
 
   it("renders all cards as a flat list", async () => {
@@ -148,6 +149,7 @@ describe("Backlog", () => {
 describe("Backlog pagination", () => {
   beforeEach(async () => {
     await resetDb();
+    await repoRepo.setActive("meperdonas", "meperboard");
     window.localStorage.clear();
   });
 

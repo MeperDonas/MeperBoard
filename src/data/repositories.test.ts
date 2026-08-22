@@ -87,6 +87,19 @@ describe("githubItemRepo", () => {
     await githubItemRepo.clearColumnOverride("meperdonas/meperboard", 7);
     expect(await githubItemRepo.getColumnOverride("meperdonas/meperboard", 7)).toBeUndefined();
   });
+
+  it("getAllByRepo returns only items for the given repo", async () => {
+    await githubItemRepo.upsert(githubItem({ repo: "meperdonas/meperboard", number: 1 }));
+    await githubItemRepo.upsert(githubItem({ repo: "meperdonas/meperboard", number: 2 }));
+    await githubItemRepo.upsert(githubItem({ repo: "acme/widgets", number: 1 }));
+
+    const meperboard = await githubItemRepo.getAllByRepo("meperdonas/meperboard");
+    expect(meperboard).toHaveLength(2);
+    expect(meperboard.every((item) => item.repo === "meperdonas/meperboard")).toBe(true);
+
+    expect(await githubItemRepo.getAllByRepo("acme/widgets")).toHaveLength(1);
+    expect(await githubItemRepo.getAllByRepo("nonexistent/repo")).toHaveLength(0);
+  });
 });
 
 describe("localItemRepo", () => {

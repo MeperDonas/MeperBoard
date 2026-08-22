@@ -38,6 +38,7 @@ export function AuthMenu({ user, activeRepo, onLogout, onClose }: AuthMenuProps)
   }
 
   const activeRepoLabel = activeRepo ? `${activeRepo.owner}/${activeRepo.name}` : "—";
+  const rateLimitLabel = user.rate_limit?.remaining ?? "—";
 
   return (
     <motion.div
@@ -86,7 +87,7 @@ export function AuthMenu({ user, activeRepo, onLogout, onClose }: AuthMenuProps)
           <Activity className="h-3.5 w-3.5" aria-hidden="true" />
           Rate limit
         </span>
-        <span className="font-medium text-foreground">—</span>
+        <span className="font-medium text-foreground">{rateLimitLabel}</span>
       </div>
 
       <div className="mx-1 my-1 h-px bg-border/50" aria-hidden="true" />

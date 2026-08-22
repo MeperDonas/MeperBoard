@@ -57,6 +57,7 @@ describe("useSync", () => {
   beforeEach(resetDb);
 
   it("triggers a read-only import that updates the store and board", async () => {
+    await repoRepo.setActive("meperdonas", "meperboard");
     const fetcher = vi.fn<(url: string) => Promise<Response>>();
     fetcher.mockResolvedValue(jsonResponse(issuePayloads));
     const client = createTestQueryClient();

@@ -139,6 +139,20 @@ describe("AuthButton", () => {
     );
   });
 
+  it("shows the rate-limit remaining in the account menu when available", async () => {
+    await resetDb();
+    mockFetch({
+      "/api/auth/me": () =>
+        jsonResponse({ ...account, rate_limit: { remaining: 4321, resetAt: 1725000000 } }),
+    });
+
+    render(<AuthButton />, { wrapper: queryWrapper(client) });
+
+    fireEvent.click(await screen.findByRole("button", { name: /account for meperdonas/i }));
+
+    expect(await screen.findByText("4321")).toBeInTheDocument();
+  });
+
   it("shows a loading state while the session check resolves", async () => {
     let resolveMe!: (value: Response) => void;
     const pending = new Promise<Response>((resolve) => {

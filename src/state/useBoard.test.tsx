@@ -1,7 +1,7 @@
 import { renderHook, waitFor } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { githubItemRepo } from "../data/repositories";
+import { githubItemRepo, repoRepo } from "../data/repositories";
 import { createTestQueryClient, makeGithubItem, queryWrapper, resetDb } from "./test-utils";
 import { useBoard } from "./useBoard";
 
@@ -10,7 +10,12 @@ describe("useBoard", () => {
 
   beforeEach(async () => {
     await resetDb();
+    await repoRepo.setActive("meperdonas", "meperboard");
     client = createTestQueryClient();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   it("loads cards into ordered columns on success", async () => {
@@ -41,11 +46,24 @@ describe("useBoard", () => {
   });
 
   it("surfaces an error when reading the store fails", async () => {
-    vi.spyOn(githubItemRepo, "getAll").mockRejectedValueOnce(new Error("indexeddb down"));
+    vi.spyOn(githubItemRepo, "getAllByRepo").mockRejectedValue(new Error("indexeddb down"));
 
     const { result } = renderHook(() => useBoard(), { wrapper: queryWrapper(client) });
 
     await waitFor(() => expect(result.current.isError).toBe(true));
     expect(result.current.error).toBeInstanceOf(Error);
+  });
+
+  it("shows only the active repo's cards after a repo is selected", async () => {
+    await githubItemRepo.upsert(makeGithubItem({ repo: "meperdonas/meperboard", number: 1, title: "Meper" }));
+    await githubItemRepo.upsert(makeGithubItem({ repo: "acme/widgets", number: 1, title: "Acme" }));
+    await repoRepo.setActive("meperdonas", "meperboard");
+
+    const { result } = renderHook(() => useBoard(), { wrapper: queryWrapper(client) });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    const titles = result.current.data!.columns.flatMap((column) => column.cards.map((card) => card.title));
+    expect(titles).toEqual(["Meper"]);
   });
 });

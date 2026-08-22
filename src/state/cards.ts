@@ -1,6 +1,7 @@
 import { columnRepo, githubItemRepo, localItemRepo } from "../data/repositories";
 import type { Column, GithubItem, LocalItem, RepoId } from "../data/types";
 import { githubStateStrategy } from "../domain/columns";
+import { DEFAULT_REPO_ID } from "./useSync";
 
 /**
  * Unified card projection over `github_items ∪ local_items`.
@@ -116,10 +117,19 @@ export function resolveGithubColumn(item: GithubItem): string {
   return githubStateStrategy.columnFor({ kind: item.kind, state: item.state });
 }
 
-/** Read all cards (github + local) as a unified projection. */
-export async function loadCards(): Promise<Card[]> {
+/**
+ * Read all cards (github + local) as a unified projection.
+ *
+ * GitHub items are filtered to the active repo (`activeRepoId`), defaulting to
+ * `DEFAULT_REPO_ID` when no repo has been selected — this is the read-path fix
+ * that keeps board/backlog scoped to the chosen repo instead of projecting the
+ * whole `github_items` store. Local cards are NOT filtered (they are global to
+ * the board and independent of the active repo).
+ */
+export async function loadCards(activeRepoId?: RepoId): Promise<Card[]> {
+  const repo = activeRepoId ?? DEFAULT_REPO_ID;
   const [githubItems, localItems, overrides] = await Promise.all([
-    githubItemRepo.getAll(),
+    githubItemRepo.getAllByRepo(repo),
     localItemRepo.getAll(),
     githubItemRepo.getAllOverrides(),
   ]);
@@ -162,8 +172,8 @@ export async function loadColumns(): Promise<Column[]> {
 }
 
 /** Full board projection: columns (ordered) + their resolved cards. */
-export async function loadBoard(): Promise<Board> {
-  const [columns, cards] = await Promise.all([loadColumns(), loadCards()]);
+export async function loadBoard(activeRepoId?: RepoId): Promise<Board> {
+  const [columns, cards] = await Promise.all([loadColumns(), loadCards(activeRepoId)]);
   return buildBoard(columns, cards);
 }
 

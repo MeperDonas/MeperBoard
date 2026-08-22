@@ -154,7 +154,7 @@ describe("loadCards / loadBoard (IndexedDB)", () => {
     await githubItemRepo.upsert(makeGithubItem({ number: 2, kind: "pull", state: "open" }));
     await localItemRepo.upsert(makeLocalItem({ id: "l1" }));
 
-    const cards = await loadCards();
+    const cards = await loadCards("meperdonas/meperboard");
     expect(cards).toHaveLength(3);
     expect(new Set(cards.map((c) => c.source))).toEqual(new Set(["github", "local"]));
   });
@@ -162,7 +162,7 @@ describe("loadCards / loadBoard (IndexedDB)", () => {
   it("loadBoard returns the default columns when the columns table is empty", async () => {
     await githubItemRepo.upsert(makeGithubItem({ number: 1 }));
 
-    const board = await loadBoard();
+    const board = await loadBoard("meperdonas/meperboard");
     expect(board.columns).toHaveLength(6);
     expect(board.columns[0].cards).toHaveLength(1);
   });
@@ -171,7 +171,7 @@ describe("loadCards / loadBoard (IndexedDB)", () => {
     await githubItemRepo.upsert(makeGithubItem({ number: 1, state: "open" }));
     await githubItemRepo.setColumnOverride("meperdonas/meperboard", 1, "done");
 
-    const cards = await loadCards();
+    const cards = await loadCards("meperdonas/meperboard");
     const card = cards.find((c) => c.number === 1);
     expect(card?.columnId).toBe("done");
   });
@@ -179,8 +179,27 @@ describe("loadCards / loadBoard (IndexedDB)", () => {
   it("keeps the strategy mapping when no override exists", async () => {
     await githubItemRepo.upsert(makeGithubItem({ number: 1, state: "open" }));
 
-    const cards = await loadCards();
+    const cards = await loadCards("meperdonas/meperboard");
     const card = cards.find((c) => c.number === 1);
     expect(card?.columnId).toBe("backlog");
+  });
+
+  it("filters github items to the active repo and keeps local cards", async () => {
+    await githubItemRepo.upsert(makeGithubItem({ repo: "meperdonas/meperboard", number: 1 }));
+    await githubItemRepo.upsert(makeGithubItem({ repo: "acme/widgets", number: 1 }));
+    await localItemRepo.upsert(makeLocalItem({ id: "l1" }));
+
+    const cards = await loadCards("meperdonas/meperboard");
+    expect(cards).toHaveLength(2); // 1 github (meperboard) + 1 local
+    expect(cards.some((c) => c.repo === "acme/widgets")).toBe(false);
+  });
+
+  it("defaults to the DEFAULT_REPO when no active repo is given", async () => {
+    await githubItemRepo.upsert(makeGithubItem({ repo: "MeperDonas/MeperPOS", number: 1 }));
+    await githubItemRepo.upsert(makeGithubItem({ repo: "acme/widgets", number: 1 }));
+
+    const cards = await loadCards();
+    expect(cards).toHaveLength(1);
+    expect(cards[0].repo).toBe("MeperDonas/MeperPOS");
   });
 });
