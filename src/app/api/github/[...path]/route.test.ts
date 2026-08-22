@@ -122,8 +122,8 @@ describe("github proxy route", () => {
     stubAuthEnv();
     const fetchMock = stubFetch({});
     const response = await route.GET(
-      githubRequest("http://localhost/api/github/user/repos"),
-      { params: Promise.resolve({ path: ["user", "repos"] }) },
+      githubRequest("http://localhost/api/github/user/orgs"),
+      { params: Promise.resolve({ path: ["user", "orgs"] }) },
     );
 
     expect(response.status).toBe(404);
@@ -159,6 +159,27 @@ describe("github proxy route", () => {
     expect((init.headers as Record<string, string>).authorization).toBe("Bearer ghu_user");
     // No proactive refresh: the session exp is far out, so only the upstream fetch happened.
     expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("forwards the live repo-list path user/repos with the user Bearer", async () => {
+    stubAuthEnv({ AUTH_MODE: "oauth" });
+    const reposUrl = "https://api.github.com/user/repos";
+    const fetchMock = stubFetch({
+      [reposUrl]: () =>
+        Promise.resolve(
+          new Response(JSON.stringify([{ full_name: "acme/widgets", name: "widgets" }]), { status: 200 }),
+        ),
+    });
+    const cookie = await sessionCookie();
+
+    const response = await route.GET(
+      githubRequest("http://localhost/api/github/user/repos", { origin: ALLOWED_ORIGIN, cookie }),
+      { params: Promise.resolve({ path: ["user", "repos"] }) },
+    );
+
+    expect(response.status).toBe(200);
+    const [, init] = upstreamCall(fetchMock, reposUrl);
+    expect((init.headers as Record<string, string>).authorization).toBe("Bearer ghu_user");
   });
 
   it("uses GITHUB_TOKEN when AUTH_MODE=pat and there is no session cookie", async () => {

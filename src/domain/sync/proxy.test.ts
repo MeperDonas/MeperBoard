@@ -102,8 +102,17 @@ describe("isAllowedPath", () => {
     expect(isAllowedPath(["repos", "meperdonas", "meperboard", "issues", "56"])).toBe(true);
   });
 
-  it("rejects a non-sync path like user/repos", () => {
-    expect(isAllowedPath(["user", "repos"])).toBe(false);
+  it("allows the live repo-list path user/repos for the switcher", () => {
+    expect(isAllowedPath(["user", "repos"])).toBe(true);
+  });
+
+  it("allows the profile path user for the switcher", () => {
+    expect(isAllowedPath(["user"])).toBe(true);
+  });
+
+  it("rejects other user/* paths that are not the switcher endpoints", () => {
+    expect(isAllowedPath(["user", "orgs"])).toBe(false);
+    expect(isAllowedPath(["user", "repos", "extra"])).toBe(false);
   });
 
   it("rejects unrelated resource paths", () => {
