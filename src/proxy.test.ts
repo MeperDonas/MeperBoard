@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { NextRequest } from "next/server";
 
-import { applyNonceRequestHeaders, buildCsp, generateNonce, middleware } from "./middleware";
+import { applyNonceRequestHeaders, buildCsp, generateNonce, proxy } from "./proxy";
 
 describe("CSP nonce middleware", () => {
   it("generates a unique, non-empty nonce", () => {
@@ -37,7 +37,7 @@ describe("CSP nonce middleware", () => {
 
   it("sets the CSP response header and a matching nonce on the request", () => {
     const request = new NextRequest("http://localhost:3000/");
-    const response = middleware(request);
+    const response = proxy(request);
 
     const csp = response.headers.get("content-security-policy");
     expect(csp).toBeTruthy();

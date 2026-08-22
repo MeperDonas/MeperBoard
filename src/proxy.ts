@@ -39,7 +39,7 @@ export function applyNonceRequestHeaders(headers: Headers, nonce: string): Heade
   return next;
 }
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const nonce = generateNonce();
   const isDev = process.env.NODE_ENV !== "production";
   const csp = buildCsp(nonce, isDev);

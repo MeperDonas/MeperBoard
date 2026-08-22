@@ -31,7 +31,7 @@ const themeInitScript = `(function(){try{var t=localStorage.getItem("meperboard-
 export default async function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
-  // The CSP middleware stamps the per-request nonce as `x-nonce` so the inline
+  // The CSP proxy stamps the per-request nonce as `x-nonce` so the inline
   // theme script is allowed by `script-src 'nonce-N' 'strict-dynamic'`.
   const nonce = (await headers()).get("x-nonce") ?? undefined;
 
