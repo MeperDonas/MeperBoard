@@ -83,6 +83,57 @@ export async function exchangeCodeForToken(params: {
   };
 }
 
+/**
+ * Rotate an access token via its `refresh_token` (GitHub Apps expiry policy).
+ *
+ * Server-to-server POST to the GitHub OAuth `access_token` endpoint with
+ * `grant_type=refresh_token`. GitHub rotates the token pair, returning a new
+ * `access_token` + `refresh_token` + `expires_in`. Returns `null` on failure
+ * (non-2xx, an `error`/`error_description` field, or a missing token field) so
+ * the caller can clear the session and force a re-login.
+ */
+export async function refreshAccessToken(params: {
+  refreshToken: string;
+  clientId: string;
+  clientSecret: string;
+}): Promise<{ access_token: string; refresh_token: string; expires_in: number } | null> {
+  const res = await fetch(GITHUB_TOKEN_URL, {
+    method: "POST",
+    headers: {
+      Accept: "application/json",
+      "Content-Type": "application/x-www-form-urlencoded",
+    },
+    body: new URLSearchParams({
+      client_id: params.clientId,
+      client_secret: params.clientSecret,
+      grant_type: "refresh_token",
+      refresh_token: params.refreshToken,
+    }).toString(),
+  });
+
+  let data: GithubTokenResult;
+  try {
+    data = (await res.json()) as GithubTokenResult;
+  } catch {
+    return null;
+  }
+
+  if (
+    !res.ok ||
+    data.error ||
+    !data.access_token ||
+    !data.refresh_token ||
+    typeof data.expires_in !== "number"
+  ) {
+    return null;
+  }
+  return {
+    access_token: data.access_token,
+    refresh_token: data.refresh_token,
+    expires_in: data.expires_in,
+  };
+}
+
 /** Fetch the authenticated user's public profile (login + avatar). */
 export async function fetchGithubUser(token: string): Promise<GithubUser | null> {
   const res = await fetch(`${GITHUB_API_URL}/user`, {
