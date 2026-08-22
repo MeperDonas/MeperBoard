@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 import { cn } from "../../lib/utils";
+import { AuthButton } from "./auth-button";
 import { PalettePicker } from "./palette-picker";
 import { ThemeToggle } from "./theme-toggle";
 
@@ -69,6 +70,7 @@ export function AppHeader() {
         })}
 
         <div className="ml-auto flex items-center gap-2">
+          <AuthButton />
           <PalettePicker />
           <ThemeToggle />
         </div>
