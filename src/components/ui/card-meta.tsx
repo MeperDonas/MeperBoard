@@ -1,18 +1,21 @@
 import { CircleDot, GitPullRequest } from "lucide-react";
+import type { ReactNode } from "react";
 
+import { cn } from "../../lib/utils";
 import { formatRelativeShort } from "../../lib/relative-date";
 import { Badge } from "./badge";
 
 /**
- * Shared card metadata composition (UX round 2): the exact same badge cluster
- * renders on board cards and backlog rows.
+ * Shared card metadata composition (UX rounds 2–3): the exact same meta row
+ * renders on board cards, ghost cards, and backlog rows.
  *
- * First badge doubles as source + kind, preserving round-1 visuals: local
- * cards keep their primary "Local" pill; GitHub items get a neutral pill with
- * a distinct lucide icon per kind (Issue vs PR). Then `#number`, state chip
- * (Open green / Closed muted), and a compact relative date derived from the
- * card's own timestamps. Missing fields (e.g. local cards have no number or
- * state) simply omit their badge — data is never invented.
+ * Round-3 hierarchy cleanup: number and kind are plain MUTED inline text
+ * (no bordered chips), the state stays a colored chip (Open green / Closed
+ * muted), and the relative date sits right-aligned in muted tabular text.
+ * Label tags render on their own tighter line below (callers own that split).
+ * Local cards keep their primary "Local" pill for instant source recognition;
+ * missing fields (e.g. local cards have no number or state) are simply
+ * omitted — data is never invented.
  */
 
 /** Structural slice of the state-layer `Card` this module needs. */
@@ -33,8 +36,8 @@ const KIND_META = {
 } as const;
 
 /**
- * Source/kind badge: "Local" (primary, as-is from round 1) or a GitHub kind
- * tag ("Issue"/"PR") with its distinct icon.
+ * Source/kind marker: local cards keep their primary "Local" pill (as in
+ * round 1); GitHub cards show their distinct lucide kind icon inline.
  */
 export function CardSourceKindBadge({ type }: { type: CardMetaInfo["type"] }) {
   if (type === "local") {
@@ -42,22 +45,18 @@ export function CardSourceKindBadge({ type }: { type: CardMetaInfo["type"] }) {
   }
   const meta = KIND_META[type];
   if (!meta) return null;
-  const { label, Icon } = meta;
-  return (
-    <Badge variant="neutral">
-      <Icon className="h-3 w-3" aria-hidden="true" />
-      {label}
-    </Badge>
-  );
+  const { Icon } = meta;
+  return <Icon className="h-3 w-3 shrink-0 text-muted-foreground" aria-hidden="true" />;
 }
 
-/** `#number` chip; hidden when the card has no number (local cards). */
-export function CardNumberBadge({ number }: { number: number | null }) {
+/**
+ * Muted inline `#number`; hidden when the card has no number (local cards).
+ * Plain text instead of an outlined chip — part of the round-3 cleanup.
+ */
+export function CardNumberText({ number }: { number: number | null }) {
   if (number == null) return null;
   return (
-    <Badge variant="outline" className="tabular-nums">
-      #{number}
-    </Badge>
+    <span className="shrink-0 text-xs tabular-nums text-muted-foreground">#{number}</span>
   );
 }
 
@@ -68,12 +67,12 @@ export function CardStateBadge({ state }: { state: string | null }) {
 }
 
 /** Compact relative date ("3d") with the full timestamp as tooltip. */
-export function CardRelativeDate({ iso }: { iso: string }) {
+export function CardRelativeDate({ iso, className }: { iso: string; className?: string }) {
   const relative = formatRelativeShort(iso);
   if (relative === "") return null;
   return (
     <span
-      className="shrink-0 text-xs tabular-nums text-muted-foreground"
+      className={cn("shrink-0 text-xs tabular-nums text-muted-foreground", className)}
       title={new Date(iso).toLocaleString()}
     >
       {relative}
@@ -81,14 +80,38 @@ export function CardRelativeDate({ iso }: { iso: string }) {
   );
 }
 
-/** The full meta row used by both board cards and backlog rows. */
-export function CardMetaBadges({ card }: { card: CardMetaInfo }) {
+/**
+ * The full meta row used by board cards and backlog rows: kind icon +
+ * `#number` muted inline, state chip, optional trailing tags (label badges),
+ * and the relative date pushed to the far edge of the row. Rendered inside a
+ * full-width flex container by the caller so `ml-auto` lands the date at the
+ * row's right edge.
+ *
+ * `trailing` lets narrow surfaces (backlog rows) keep labels on the same
+ * line; wide surfaces (board cards) omit it and stack labels below instead.
+ */
+export function CardMetaRow({
+  card,
+  trailing,
+}: {
+  card: CardMetaInfo;
+  trailing?: ReactNode;
+}) {
+  const kindLabel =
+    card.type === "local" || !KIND_META[card.type] ? null : KIND_META[card.type].label;
+
   return (
     <>
       <CardSourceKindBadge type={card.type} />
-      <CardNumberBadge number={card.number} />
+      <span className="flex min-w-0 items-center gap-1">
+        <CardNumberText number={card.number} />
+        {kindLabel != null && (
+          <span className="truncate text-xs text-muted-foreground">{kindLabel}</span>
+        )}
+      </span>
       <CardStateBadge state={card.state} />
-      <CardRelativeDate iso={card.updatedAt} />
+      {trailing}
+      <CardRelativeDate iso={card.updatedAt} className="ml-auto" />
     </>
   );
 }

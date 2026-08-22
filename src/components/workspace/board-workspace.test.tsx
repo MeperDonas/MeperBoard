@@ -9,6 +9,10 @@ vi.mock("next/link", () => ({
 
 import { githubItemRepo, localItemRepo } from "../../data/repositories";
 import {
+  loadLocalCardsCollapsed,
+  saveLocalCardsCollapsed,
+} from "../../lib/local-cards-collapsed";
+import {
   createTestQueryClient,
   makeGithubItem,
   makeLocalItem,
@@ -121,5 +125,68 @@ describe("BoardWorkspace", () => {
     await waitFor(async () =>
       expect(await githubItemRepo.getColumnOverride("meperdonas/meperboard", 1)).toBe("in-review"),
     );
+  });
+});
+
+describe("Local cards rail", () => {
+  beforeEach(async () => {
+    await resetDb();
+    // Collapse state persists in localStorage — isolate every test.
+    window.localStorage.clear();
+  });
+
+  it("renders stat pills per kind with a stable test id", async () => {
+    await githubItemRepo.upsert(makeGithubItem({ number: 1, state: "open", title: "Fix login" }));
+    await githubItemRepo.upsert(
+      makeGithubItem({ number: 2, kind: "pull", state: "open", title: "Update deps" }),
+    );
+    await localItemRepo.upsert(makeLocalItem({ id: "l1", title: "Buy milk" }));
+
+    renderWorkspace();
+
+    const pills = screen.getByTestId("total-count");
+    await waitFor(() => expect(pills).toHaveTextContent("1 issues"));
+    expect(pills).toHaveTextContent("1 PRs");
+    expect(pills).toHaveTextContent("1 local");
+  });
+
+  it("collapses and reopens the rail through the toolbar toggle", async () => {
+    renderWorkspace();
+
+    await waitFor(() =>
+      expect(screen.getByRole("region", { name: "Kanban board" })).toBeInTheDocument(),
+    );
+
+    const toggle = screen.getByTestId("rail-toggle");
+    expect(toggle).toHaveAttribute("aria-expanded", "true");
+    expect(toggle).toHaveAttribute("aria-controls", "local-cards-panel");
+    expect(screen.getByRole("region", { name: "Local cards" })).toBeInTheDocument();
+
+    fireEvent.click(toggle);
+
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+    expect(loadLocalCardsCollapsed()).toBe(true);
+    await waitFor(() =>
+      expect(screen.queryByRole("region", { name: "Local cards" })).not.toBeInTheDocument(),
+    );
+
+    fireEvent.click(toggle);
+
+    expect(toggle).toHaveAttribute("aria-expanded", "true");
+    await waitFor(() =>
+      expect(screen.getByRole("region", { name: "Local cards" })).toBeInTheDocument(),
+    );
+  });
+
+  it("restores a persisted collapsed state on mount", async () => {
+    saveLocalCardsCollapsed(true);
+
+    renderWorkspace();
+
+    await waitFor(() =>
+      expect(screen.getByRole("region", { name: "Kanban board" })).toBeInTheDocument(),
+    );
+
+    expect(screen.getByTestId("rail-toggle")).toHaveAttribute("aria-expanded", "false");
   });
 });

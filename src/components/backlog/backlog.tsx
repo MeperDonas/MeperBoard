@@ -5,7 +5,8 @@ import { motion, useReducedMotion } from "framer-motion";
 import {
   ArrowDown,
   ArrowUp,
-  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   ExternalLink,
   FilterX,
   Inbox,
@@ -31,6 +32,7 @@ import {
 import { filterByTitle } from "../../lib/card-filters";
 import { loadStoredBacklogSort, saveBacklogSort } from "../../lib/backlog-sort-storage";
 import { SEARCH_DEBOUNCE_MS } from "../../lib/config";
+import { clampPage, DEFAULT_PAGE_SIZE, PAGER_VISIBLE_ABOVE, PAGE_SIZE_OPTIONS, paginate, sanitizePageSize, type PageSizeOption } from "../../lib/pagination";
 import { useDebouncedValue } from "../../lib/use-debounced-value";
 import { useGuardedRouter } from "../../lib/use-guarded-router";
 import { cn } from "../../lib/utils";
@@ -48,7 +50,8 @@ import {
   type SortField,
 } from "../../state";
 import { Badge } from "../ui/badge";
-import { CardMetaBadges } from "../ui/card-meta";
+import { CardMetaRow } from "../ui/card-meta";
+import { Select } from "../ui/select";
 
 type TypeFilter = CardType | "all";
 
@@ -72,19 +75,19 @@ const GROUP_OPTIONS: { value: BacklogGroupKey; label: string }[] = [
   { value: "source", label: "Source" },
 ];
 
-const ALL_LABELS = "all";
+const STATUS_OPTIONS: { value: LocalStatus; label: string }[] = [
+  { value: "todo", label: "To Do" },
+  { value: "doing", label: "Doing" },
+  { value: "done", label: "Done" },
+];
 
-const selectClassName =
-  "appearance-none rounded-lg border bg-card py-1.5 pl-3 pr-9 text-sm text-foreground shadow-xs transition-colors duration-150 hover:border-foreground/20";
+const ALL_LABELS = "all";
 
 const searchClassName =
   "w-full rounded-lg border bg-card py-1.5 pl-8 pr-3 text-sm text-foreground shadow-xs transition-colors duration-150 placeholder:text-muted-foreground/70 hover:border-foreground/20";
 
 const editorInputClassName =
   "w-full rounded-lg border bg-background px-3 py-2 text-sm text-foreground transition-colors duration-150 placeholder:text-muted-foreground/70 hover:border-foreground/20";
-
-const editorSelectClassName =
-  "appearance-none rounded-lg border bg-background py-1.5 pl-2.5 pr-8 text-sm text-foreground transition-colors duration-150 hover:border-foreground/20";
 
 /** Patch applied to a local card through the workspace-composed handler. */
 export interface BacklogLocalCardPatch {
@@ -111,13 +114,17 @@ export interface BacklogProps {
  * Flat backlog: every card (GitHub + local) in one searchable, filterable,
  * sortable, groupable list.
  *
- * UX round 2 adds: debounced title search, group-by with sticky headers,
+ * UX round 2 added: debounced title search, group-by with sticky headers,
  * localStorage-persisted sort, shared meta badges (#number, kind, state,
  * relative date), row quick actions (open on GitHub / edit / delete for
  * local cards), j/k roving-focus keyboard navigation with Enter opening the
  * issue detail route, and window virtualization once the rendered list grows
  * past a threshold — virtualization runs on the flat post-grouping order so
  * grouped and ungrouped views scale identically.
+ *
+ * UX round 3 adds: a visible-limit pager (25 / 50 / 100 rows per page, default
+ * 25) applied BEFORE grouping and virtualization so lists never pile up, and
+ * custom popover selects replacing every OS-native dropdown.
  */
 export function Backlog({ localActions }: BacklogProps = {}) {
   const { data, isPending, isError } = useBacklog();
@@ -131,6 +138,8 @@ export function Backlog({ localActions }: BacklogProps = {}) {
   const [groupBy, setGroupBy] = useState<BacklogGroupKey>("none");
   const [searchInput, setSearchInput] = useState("");
   const searchQuery = useDebouncedValue(searchInput, SEARCH_DEBOUNCE_MS);
+  const [pageSize, setPageSize] = useState<PageSizeOption>(DEFAULT_PAGE_SIZE);
+  const [page, setPage] = useState(1);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [focusIndex, setFocusIndex] = useState(0);
   const rowRefs = useRef(new Map<number, HTMLElement>());
@@ -153,6 +162,14 @@ export function Backlog({ localActions }: BacklogProps = {}) {
     [cards],
   );
 
+  const LABEL_OPTIONS = useMemo(
+    () => [
+      { value: ALL_LABELS, label: "All labels" },
+      ...labels.map((label) => ({ value: label, label })),
+    ],
+    [labels],
+  );
+
   const filters: BacklogFilters = useMemo(() => {
     const result: BacklogFilters = {};
     if (typeFilter !== "all") result.type = typeFilter;
@@ -165,17 +182,31 @@ export function Backlog({ localActions }: BacklogProps = {}) {
     [sortField, sortDir],
   );
 
-  // Pipeline order: filters → title search → sort → group → flat render list.
+  // Pipeline order: filters → title search → sort → PAGINATE → group → flat
+  // render list. Pagination runs before grouping so a page slice is exactly
+  // what renders; the virtualizer (if any) only ever sees one page.
   const visible = useMemo(
     () => sortCards(filterByTitle(filterCards(cards, filters), searchQuery), sort),
     [cards, filters, searchQuery, sort],
   );
-  const groups = useMemo(() => groupCards(visible, groupBy), [visible, groupBy]);
+  const effectivePage = clampPage(visible.length, pageSize, page);
+  const paged = useMemo(
+    () => paginate(visible, effectivePage, pageSize),
+    [visible, effectivePage, pageSize],
+  );
+  const groups = useMemo(() => groupCards(paged.items, groupBy), [paged, groupBy]);
   const entries = useMemo(() => flattenGroups(groups), [groups]);
   const rowCount = useMemo(
     () => entries.reduce((count, entry) => (entry.kind === "row" ? count + 1 : count), 0),
     [entries],
   );
+
+  // Any change to search/filter/group/sort/page size restarts at page 1 —
+  // stale page indices would otherwise show empty or wrong slices.
+  const viewSignature = `${typeFilter}|${labelFilter}|${searchQuery}|${sortField}|${sortDir}|${groupBy}|${pageSize}`;
+  useEffect(() => {
+    setPage(1);
+  }, [viewSignature]);
 
   // Keep roving focus in bounds when the visible list shrinks.
   useEffect(() => {
@@ -204,9 +235,15 @@ export function Backlog({ localActions }: BacklogProps = {}) {
   }
 
   function handleListKeyDown(event: KeyboardEvent<HTMLElement>) {
-    // Never hijack keys typed into inline editors or selects inside a row.
+    // Never hijack keys typed into inline editors or the custom combobox
+    // triggers inside a row (native selects became buttons in round 3).
     const target = event.target;
-    if (target instanceof HTMLElement && target.closest("input, textarea, select")) return;
+    if (
+      target instanceof HTMLElement &&
+      target.closest("input, textarea, select, button[role='combobox']")
+    ) {
+      return;
+    }
     if (event.key === "j") {
       event.preventDefault();
       moveFocus(1);
@@ -241,8 +278,6 @@ export function Backlog({ localActions }: BacklogProps = {}) {
     setEditingId(null);
   }
 
-  const viewSignature = `${typeFilter}|${labelFilter}|${searchQuery}|${sortField}|${sortDir}|${groupBy}`;
-
   const listProps = {
     entries,
     focusIndex,
@@ -276,90 +311,49 @@ export function Backlog({ localActions }: BacklogProps = {}) {
           </span>
         </label>
 
-        <label className="flex flex-col gap-1.5 text-xs font-medium text-muted-foreground">
+        <div className="flex flex-col gap-1.5 text-xs font-medium text-muted-foreground">
           <span>Type</span>
-          <span className="relative inline-flex items-center">
-            <select
-              value={typeFilter}
-              onChange={(event) => setTypeFilter(event.target.value as TypeFilter)}
-              className={selectClassName}
-            >
-              {TYPE_OPTIONS.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-            <ChevronDown
-              className="pointer-events-none absolute right-2.5 h-4 w-4 text-muted-foreground"
-              aria-hidden="true"
-            />
-          </span>
-        </label>
+          <Select
+            aria-label="Type"
+            options={TYPE_OPTIONS}
+            value={typeFilter}
+            onValueChange={(next) => setTypeFilter(next as TypeFilter)}
+            className="w-32"
+          />
+        </div>
 
-        <label className="flex flex-col gap-1.5 text-xs font-medium text-muted-foreground">
+        <div className="flex flex-col gap-1.5 text-xs font-medium text-muted-foreground">
           <span>Label</span>
-          <span className="relative inline-flex items-center">
-            <select
-              value={labelFilter}
-              onChange={(event) => setLabelFilter(event.target.value)}
-              className={selectClassName}
-            >
-              <option value={ALL_LABELS}>All labels</option>
-              {labels.map((label) => (
-                <option key={label} value={label}>
-                  {label}
-                </option>
-              ))}
-            </select>
-            <ChevronDown
-              className="pointer-events-none absolute right-2.5 h-4 w-4 text-muted-foreground"
-              aria-hidden="true"
-            />
-          </span>
-        </label>
+          <Select
+            aria-label="Label"
+            options={LABEL_OPTIONS}
+            value={labelFilter}
+            onValueChange={setLabelFilter}
+            className="w-44"
+          />
+        </div>
 
-        <label className="flex flex-col gap-1.5 text-xs font-medium text-muted-foreground">
+        <div className="flex flex-col gap-1.5 text-xs font-medium text-muted-foreground">
           <span>Group by</span>
-          <span className="relative inline-flex items-center">
-            <select
-              value={groupBy}
-              onChange={(event) => setGroupBy(event.target.value as BacklogGroupKey)}
-              className={selectClassName}
-            >
-              {GROUP_OPTIONS.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-            <ChevronDown
-              className="pointer-events-none absolute right-2.5 h-4 w-4 text-muted-foreground"
-              aria-hidden="true"
-            />
-          </span>
-        </label>
+          <Select
+            aria-label="Group by"
+            options={GROUP_OPTIONS}
+            value={groupBy}
+            onValueChange={(next) => setGroupBy(next as BacklogGroupKey)}
+            className="w-32"
+          />
+        </div>
 
-        <label className="flex flex-col gap-1.5 text-xs font-medium text-muted-foreground">
+        <div className="flex flex-col gap-1.5 text-xs font-medium text-muted-foreground">
           <span>Sort by</span>
-          <span className="relative inline-flex items-center">
-            <select
-              value={sortField}
-              onChange={(event) => setSortField(event.target.value as SortField)}
-              className={selectClassName}
-            >
-              {SORT_FIELD_OPTIONS.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-            <ChevronDown
-              className="pointer-events-none absolute right-2.5 h-4 w-4 text-muted-foreground"
-              aria-hidden="true"
-            />
-          </span>
-        </label>
+          <Select
+            aria-label="Sort by"
+            options={SORT_FIELD_OPTIONS}
+            value={sortField}
+            onValueChange={(next) => setSortField(next as SortField)}
+            className="w-28"
+          />
+        </div>
 
         <button
           type="button"
@@ -384,18 +378,30 @@ export function Backlog({ localActions }: BacklogProps = {}) {
           <NoMatches />
         )
       ) : (
-        <motion.div
-          key={viewSignature}
-          initial={reduceMotion ? false : { opacity: 0, y: 4 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.15 }}
-        >
-          {shouldVirtualize(entries.length) ? (
-            <VirtualEntryList {...listProps} />
-          ) : (
-            <PlainEntryList {...listProps} />
+        <>
+          <motion.div
+            key={viewSignature}
+            initial={reduceMotion ? false : { opacity: 0, y: 4 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.15 }}
+          >
+            {shouldVirtualize(entries.length) ? (
+              <VirtualEntryList {...listProps} />
+            ) : (
+              <PlainEntryList {...listProps} />
+            )}
+          </motion.div>
+          {paged.totalItems > PAGER_VISIBLE_ABOVE && (
+            <BacklogPager
+              page={paged.page}
+              totalPages={paged.totalPages}
+              totalItems={paged.totalItems}
+              pageSize={paged.pageSize}
+              onPageChange={setPage}
+              onPageSizeChange={(next) => setPageSize(sanitizePageSize(next))}
+            />
           )}
-        </motion.div>
+        </>
       )}
     </div>
   );
@@ -412,6 +418,87 @@ interface EntryListProps {
   onCancelEdit: () => void;
   onSaveEdit: (card: Card, patch: BacklogLocalCardPatch) => void;
   localActions?: BacklogLocalActions;
+}
+
+const pagerButtonClassName =
+  "rounded-lg border bg-card p-1.5 text-muted-foreground shadow-xs transition-colors duration-150 hover:border-foreground/20 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-border disabled:hover:text-muted-foreground";
+
+/**
+ * Pagination footer (UX round 3): Prev / "Page N of M" / Next plus a page-size
+ * selector. Rendered whenever the filtered list exceeds the default page size
+ * (25), even if a larger page size could fit everything — switching sizes must
+ * stay discoverable. Lists at or below the threshold never paginate.
+ */
+function BacklogPager({
+  page,
+  totalPages,
+  totalItems,
+  pageSize,
+  onPageChange,
+  onPageSizeChange,
+}: {
+  page: number;
+  totalPages: number;
+  totalItems: number;
+  pageSize: number;
+  onPageChange: (page: number) => void;
+  onPageSizeChange: (size: number) => void;
+}) {
+  const first = (page - 1) * pageSize + 1;
+  const last = Math.min(totalItems, page * pageSize);
+
+  return (
+    <nav
+      data-testid="backlog-pager"
+      aria-label="Backlog pagination"
+      className="mt-3 flex items-center justify-between gap-3"
+    >
+      <p className="text-xs tabular-nums text-muted-foreground">
+        Showing {first}–{last} of {totalItems}
+      </p>
+      <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            onClick={() => onPageChange(page - 1)}
+            disabled={page <= 1}
+            aria-label="Previous page"
+            title="Previous page"
+            className={pagerButtonClassName}
+          >
+            <ChevronLeft className="h-4 w-4" aria-hidden="true" />
+          </button>
+          <span
+            aria-live="polite"
+            className="min-w-20 px-1 text-center text-xs tabular-nums text-muted-foreground"
+          >
+            Page {page} of {totalPages}
+          </span>
+          <button
+            type="button"
+            onClick={() => onPageChange(page + 1)}
+            disabled={page >= totalPages}
+            aria-label="Next page"
+            title="Next page"
+            className={pagerButtonClassName}
+          >
+            <ChevronRight className="h-4 w-4" aria-hidden="true" />
+          </button>
+        </div>
+        <Select
+          aria-label="Rows per page"
+          size="sm"
+          options={PAGE_SIZE_OPTIONS.map((size) => ({
+            value: String(size),
+            label: `${size} / page`,
+          }))}
+          value={String(pageSize)}
+          onValueChange={(next) => onPageSizeChange(Number(next))}
+          className="w-28"
+        />
+      </div>
+    </nav>
+  );
 }
 
 /**
@@ -601,13 +688,19 @@ function BacklogRowContent({
         >
           {card.title}
         </p>
-        <div className="mt-1 flex flex-wrap items-center gap-1.5">
-          <CardMetaBadges card={card} />
-          {card.labels.map((label) => (
-            <Badge key={label} variant="outline">
-              {label}
-            </Badge>
-          ))}
+        <div className="mt-1 flex w-full items-center gap-2">
+          <CardMetaRow
+            card={card}
+            trailing={
+              <>
+                {card.labels.map((label) => (
+                  <Badge key={label} variant="outline">
+                    {label}
+                  </Badge>
+                ))}
+              </>
+            }
+          />
         </div>
       </div>
 
@@ -685,22 +778,16 @@ function LocalRowEditor({
           aria-label="Edit card title"
           className={editorInputClassName}
         />
-        <span className="relative inline-flex shrink-0 items-center">
-          <select
-            value={status}
-            onChange={(event) => setStatus(event.target.value as LocalStatus)}
+        <div className="shrink-0">
+          <Select
             aria-label="Edit card status"
-            className={editorSelectClassName}
-          >
-            <option value="todo">To Do</option>
-            <option value="doing">Doing</option>
-            <option value="done">Done</option>
-          </select>
-          <ChevronDown
-            className="pointer-events-none absolute right-2 h-3.5 w-3.5 text-muted-foreground"
-            aria-hidden="true"
+            size="sm"
+            options={STATUS_OPTIONS}
+            value={status}
+            onValueChange={(next) => setStatus(next as LocalStatus)}
+            className="w-24"
           />
-        </span>
+        </div>
         <div className="flex shrink-0 items-center gap-1.5">
           <button
             type="submit"

@@ -13,14 +13,14 @@ import {
 } from "@dnd-kit/core";
 import { LayoutGroup, motion, useReducedMotion } from "framer-motion";
 import { AlertCircle, GripVertical, Inbox, MoveLeft, MoveRight } from "lucide-react";
-import { useCallback, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
 
 import { cn } from "../../lib/utils";
 import { remainingCardCount, visibleCardCount } from "../../lib/capping";
 import { MAX_WIP_PER_COLUMN } from "../../lib/config";
 import { useBoard, type Board, type BoardColumn as BoardColumnType, type Card } from "../../state";
 import { Badge } from "../ui/badge";
-import { CardMetaBadges } from "../ui/card-meta";
+import { CardMetaRow } from "../ui/card-meta";
 import { MoveToast, type MoveToastState } from "./move-toast";
 import { adjacentColumnId, applyMoves, resolveMove, type BoardMove } from "./move";
 
@@ -31,6 +31,19 @@ export interface BoardProps {
   onMoveCard?: (move: BoardMove) => void;
 }
 
+/** Tuned flight between/reorder within columns — snappy takeoff, soft landing. */
+const CARD_FLIGHT_SPRING = { type: "spring", stiffness: 500, damping: 40, mass: 0.9 } as const;
+
+/** DragOverlay ghost lift relative to its resting size (≤ ~1.03 keeps text crisp). */
+const GHOST_SCALE = 1.03;
+/** Slight ghost tilt in degrees — reads as "picked up", never cartoonish. */
+const GHOST_TILT_DEG = 1.5;
+/** How long the landing accent-ring pulse fades out (~300ms per round 3 spec). */
+const LANDING_PULSE_MS = 300;
+/** Mid-flight scale dip duration: content settles from slightly small onto landing. */
+const FLIGHT_DIP_MS = 300;
+const FLIGHT_DIP_KEYFRAMES = [0.96, 1];
+
 /**
  * Kanban board: ordered columns over the unified card projection. Supports
  * pointer drag (dnd-kit) and a keyboard/single-pointer alternative (move
@@ -40,6 +53,12 @@ export interface BoardProps {
  * shared-layout flight when cards land or reorder (framer-motion `layoutId`),
  * per-column windowing ("Show N more") so huge columns stay cheap, a WIP
  * warning on over-limit columns, and an undo toast after each move.
+ *
+ * UX round 3 re-tunes the flight to feel premium: the ghost lifts with a
+ * ~1.03x scale + slight tilt + elevation-3 shadow; flights use a tuned spring
+ * (stiffness 500 / damping 40 / mass 0.9) with a subtle mid-flight scale dip;
+ * the landing column pulses an accent ring (~300ms fade). Every motion path
+ * is gated on `useReducedMotion` — framer-motion ignores CSS kill blocks.
  *
  * The board remains read-only: it renders cards and reports moves via
  * `onMoveCard`; it never writes to GitHub or the local store itself.
@@ -54,7 +73,23 @@ export function Board({ onMoveCard }: BoardProps) {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [expandedSteps, setExpandedSteps] = useState<Record<string, number>>({});
   const [toast, setToast] = useState<MoveToastState | null>(null);
+  const [pulse, setPulse] = useState<{ columnId: string; key: number } | null>(null);
+  const [flight, setFlight] = useState<{ cardId: string; key: number } | null>(null);
   const dismissToast = useCallback(() => setToast(null), []);
+
+  // Landing feedback timers: the accent ring (~300ms fade) and the mid-flight
+  // scale dip both self-clear — nodes unmount, nothing lingers in the DOM.
+  useEffect(() => {
+    if (!pulse && !flight) return;
+    const timer = setTimeout(
+      () => {
+        setPulse(null);
+        setFlight(null);
+      },
+      Math.max(LANDING_PULSE_MS, FLIGHT_DIP_MS) + 50,
+    );
+    return () => clearTimeout(timer);
+  }, [pulse, flight]);
 
   if (isPending) {
     return <BoardSkeleton />;
@@ -78,6 +113,14 @@ export function Board({ onMoveCard }: BoardProps) {
     if (!move) return;
     setMoves((previous) => ({ ...previous, [cardId]: toColumnId }));
     onMoveCard?.(move);
+    if (!reduceMotion && move.toColumnId !== move.fromColumnId) {
+      const key = Date.now();
+      setPulse({ columnId: move.toColumnId, key });
+      // Owned at Board level on purpose: the moving card unmounts from its
+      // old column and mounts into the new one, so per-card refs would reset
+      // and never detect the crossing.
+      setFlight({ cardId, key });
+    }
     const title = findCard(effective, cardId)?.title ?? "card";
     setToast({ key: Date.now(), cardId, title, fromColumnId: move.fromColumnId });
   }
@@ -126,6 +169,8 @@ export function Board({ onMoveCard }: BoardProps) {
               <BoardColumn
                 key={column.id}
                 column={column}
+                pulse={pulse}
+                flight={flight}
                 expandedSteps={expandedSteps[column.id] ?? 0}
                 onExpand={() => handleExpand(column.id)}
                 onMoveRelative={handleMoveRelative}
@@ -134,7 +179,7 @@ export function Board({ onMoveCard }: BoardProps) {
             ))}
           </div>
           <DragOverlay dropAnimation={reduceMotion ? null : undefined}>
-            {activeCard ? <GhostCard card={activeCard} /> : null}
+            {activeCard ? <GhostCard card={activeCard} reduceMotion={reduceMotion} /> : null}
           </DragOverlay>
         </LayoutGroup>
       </div>
@@ -145,12 +190,16 @@ export function Board({ onMoveCard }: BoardProps) {
 
 function BoardColumn({
   column,
+  pulse,
+  flight,
   expandedSteps,
   onExpand,
   onMoveRelative,
   reduceMotion,
 }: {
   column: BoardColumnType;
+  pulse: { columnId: string; key: number } | null;
+  flight: { cardId: string; key: number } | null;
   expandedSteps: number;
   onExpand: () => void;
   onMoveRelative: (cardId: string, delta: -1 | 1) => void;
@@ -170,10 +219,22 @@ function BoardColumn({
       data-column-id={column.id}
       aria-label={`${column.title} column`}
       className={cn(
-        "flex min-h-48 w-72 shrink-0 flex-col rounded-xl border bg-card p-2 transition-colors duration-150",
+        "relative flex min-h-48 w-72 shrink-0 flex-col rounded-xl border bg-card p-2 transition-colors duration-150",
         isOver && "border-primary/60 bg-primary/5 ring-1 ring-primary/30",
       )}
     >
+      {pulse != null && pulse.columnId === column.id && !reduceMotion && (
+        // Landing accent pulse (~300ms fade). Mount-only animation: the node
+        // unmounts when the timer clears it — no lingering exit in the DOM.
+        <motion.div
+          key={pulse.key}
+          aria-hidden="true"
+          initial={{ opacity: 0.85 }}
+          animate={{ opacity: 0 }}
+          transition={{ duration: LANDING_PULSE_MS / 1000, ease: "easeOut" }}
+          className="pointer-events-none absolute inset-0 z-10 rounded-xl ring-2 ring-primary/60"
+        />
+      )}
       <header className="flex items-center justify-between px-2 py-1.5">
         <h2 className="text-sm font-medium tracking-tight">{column.title}</h2>
         <span
@@ -193,6 +254,7 @@ function BoardColumn({
           <BoardCard
             key={card.id}
             card={card}
+            dipping={flight?.cardId === card.id}
             onMoveRelative={onMoveRelative}
             reduceMotion={reduceMotion}
           />
@@ -216,10 +278,13 @@ function BoardColumn({
 
 function BoardCard({
   card,
+  dipping,
   onMoveRelative,
   reduceMotion,
 }: {
   card: Card;
+  /** True while this card is mid-flight to another column (Board-owned). */
+  dipping: boolean;
   onMoveRelative: (cardId: string, delta: -1 | 1) => void;
   reduceMotion: boolean;
 }) {
@@ -228,85 +293,112 @@ function BoardCard({
   });
 
   return (
-    // Shared layoutId lets framer-motion fly the card between columns and
-    // animate reorders; reduced-motion users get an instant swap instead.
+    // Shared layoutId lets framer-motion fly the card between columns with a
+    // tuned spring (stiffness 500 / damping 40 / mass 0.9); reduced-motion
+    // users get an instant swap instead.
     <motion.li
       ref={setNodeRef}
       layoutId={reduceMotion ? undefined : card.id}
+      transition={reduceMotion ? { duration: 0 } : CARD_FLIGHT_SPRING}
       initial={reduceMotion ? false : { opacity: 0 }}
       animate={{ opacity: 1 }}
-      transition={{ duration: 0.18 }}
       className={cn(
         "rounded-lg border bg-elevated p-3 text-card-foreground shadow-xs transition-colors duration-150 hover:border-foreground/20",
         isDragging && "opacity-40 shadow-lg",
       )}
     >
-      <div className="flex items-start gap-2">
-        <button
-          ref={setActivatorNodeRef}
-          {...listeners}
-          {...attributes}
-          type="button"
-          aria-label={`Drag ${card.title}`}
-          className="mt-0.5 shrink-0 cursor-grab rounded text-muted-foreground transition-colors duration-150 hover:text-foreground active:cursor-grabbing"
-        >
-          <GripVertical className="h-4 w-4" aria-hidden="true" />
-        </button>
+      <motion.div
+        // `flight` only exists when reduced motion is off (Board gates it),
+        // so a true `dipping` here always means "play the dip".
+        animate={dipping ? { scale: FLIGHT_DIP_KEYFRAMES } : { scale: 1 }}
+        transition={CARD_FLIGHT_SPRING}
+        style={{ transformOrigin: "center top" }}
+      >
+        <div className="flex items-start gap-2">
+          <button
+            ref={setActivatorNodeRef}
+            {...listeners}
+            {...attributes}
+            type="button"
+            aria-label={`Drag ${card.title}`}
+            className="mt-0.5 shrink-0 cursor-grab rounded text-muted-foreground transition-colors duration-150 hover:text-foreground active:cursor-grabbing"
+          >
+            <GripVertical className="h-4 w-4" aria-hidden="true" />
+          </button>
 
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-medium leading-snug" title={card.title}>
-            {card.title}
-          </p>
-          <div className="mt-2 flex flex-wrap items-center gap-1.5">
-            <CardMetaBadges card={card} />
-            {card.labels.map((label) => (
-              <Badge key={label} variant="outline">
-                {label}
-              </Badge>
-            ))}
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-medium leading-snug" title={card.title}>
+              {card.title}
+            </p>
+            <div className="mt-2 flex w-full items-center gap-2">
+              <CardMetaRow card={card} />
+            </div>
+            {card.labels.length > 0 && (
+              <div className="mt-1.5 flex flex-wrap items-center gap-1">
+                {card.labels.map((label) => (
+                  <Badge key={label} variant="outline">
+                    {label}
+                  </Badge>
+                ))}
+              </div>
+            )}
           </div>
         </div>
-      </div>
 
-      <div className="mt-2 flex items-center gap-1 border-t pt-2">
-        <button
-          type="button"
-          aria-label={`Move ${card.title} left`}
-          onClick={() => onMoveRelative(card.id, -1)}
-          className="rounded-md p-1 text-muted-foreground transition-colors duration-150 hover:bg-muted hover:text-foreground"
-        >
-          <MoveLeft className="h-4 w-4" aria-hidden="true" />
-        </button>
-        <button
-          type="button"
-          aria-label={`Move ${card.title} right`}
-          onClick={() => onMoveRelative(card.id, 1)}
-          className="rounded-md p-1 text-muted-foreground transition-colors duration-150 hover:bg-muted hover:text-foreground"
-        >
-          <MoveRight className="h-4 w-4" aria-hidden="true" />
-        </button>
-      </div>
+        <div className="mt-2 flex items-center gap-1 border-t pt-2">
+          <button
+            type="button"
+            aria-label={`Move ${card.title} left`}
+            onClick={() => onMoveRelative(card.id, -1)}
+            className="rounded-md p-1 text-muted-foreground transition-colors duration-150 hover:bg-muted hover:text-foreground"
+          >
+            <MoveLeft className="h-4 w-4" aria-hidden="true" />
+          </button>
+          <button
+            type="button"
+            aria-label={`Move ${card.title} right`}
+            onClick={() => onMoveRelative(card.id, 1)}
+            className="rounded-md p-1 text-muted-foreground transition-colors duration-150 hover:bg-muted hover:text-foreground"
+          >
+            <MoveRight className="h-4 w-4" aria-hidden="true" />
+          </button>
+        </div>
+      </motion.div>
     </motion.li>
   );
 }
 
-/** Lifted ghost that follows the cursor during a drag (non-interactive). */
-function GhostCard({ card }: { card: Card }) {
+/**
+ * Lifted ghost that follows the cursor during a drag (non-interactive). It
+ * lifts to ~1.03x with an elevation-3 shadow and a slight tilt so it reads as
+ * physically picked up; reduced-motion users get a static ghost.
+ */
+function GhostCard({ card, reduceMotion }: { card: Card; reduceMotion: boolean }) {
   return (
-    <div
+    <motion.div
       aria-hidden="true"
+      initial={reduceMotion ? false : { scale: 1, rotate: 0 }}
+      animate={{
+        scale: reduceMotion ? 1 : GHOST_SCALE,
+        rotate: reduceMotion ? 0 : GHOST_TILT_DEG,
+      }}
+      transition={CARD_FLIGHT_SPRING}
       className="w-68 cursor-grabbing rounded-lg border bg-elevated p-3 text-card-foreground shadow-lg ring-1 ring-primary/30"
     >
       <p className="truncate text-sm font-medium leading-snug">{card.title}</p>
-      <div className="mt-2 flex flex-wrap items-center gap-1.5">
-        <CardMetaBadges card={card} />
-        {card.labels.map((label) => (
-          <Badge key={label} variant="outline">
-            {label}
-          </Badge>
-        ))}
+      <div className="mt-2 flex w-full items-center gap-2">
+        <CardMetaRow card={card} />
       </div>
-    </div>
+      {card.labels.length > 0 && (
+        <div className="mt-1.5 flex flex-wrap items-center gap-1">
+          {card.labels.map((label) => (
+            <Badge key={label} variant="outline">
+              {label}
+            </Badge>
+          ))}
+        </div>
+      )}
+    </motion.div>
   );
 }
 

@@ -17,6 +17,12 @@ function renderBacklog() {
   return { client, ...utils };
 }
 
+/** Drive the custom popover select (round 3): open, then pick an option. */
+function changeSelect(name: string, optionLabel: string) {
+  fireEvent.click(screen.getByRole("combobox", { name }));
+  fireEvent.click(screen.getByRole("option", { name: optionLabel }));
+}
+
 function backlogItems(): HTMLElement[] {
   return within(screen.getByRole("list", { name: "Backlog items" })).getAllByRole("listitem");
 }
@@ -42,7 +48,7 @@ describe("Backlog", () => {
     expect(backlogItems()).toHaveLength(2);
   });
 
-  it("filters by type", async () => {
+  it("filters by type through the custom select", async () => {
     await githubItemRepo.upsert(makeGithubItem({ number: 1, title: "Fix login" }));
     await githubItemRepo.upsert(makeGithubItem({ number: 2, kind: "pull", title: "Update deps" }));
 
@@ -50,14 +56,14 @@ describe("Backlog", () => {
 
     await waitFor(() => expect(screen.getByText("Fix login")).toBeInTheDocument());
 
-    fireEvent.change(screen.getByLabelText("Type"), { target: { value: "pull" } });
+    changeSelect("Type", "Pull requests");
 
     await waitFor(() => expect(screen.queryByText("Fix login")).not.toBeInTheDocument());
     expect(screen.getByText("Update deps")).toBeInTheDocument();
     expect(backlogItems()).toHaveLength(1);
   });
 
-  it("filters by label", async () => {
+  it("filters by label through the custom select", async () => {
     await githubItemRepo.upsert(makeGithubItem({ number: 1, title: "Fix login", labels: ["bug"] }));
     await githubItemRepo.upsert(
       makeGithubItem({ number: 2, title: "Add theme", labels: ["feature"] }),
@@ -67,7 +73,7 @@ describe("Backlog", () => {
 
     await waitFor(() => expect(screen.getByText("Fix login")).toBeInTheDocument());
 
-    fireEvent.change(screen.getByLabelText("Label"), { target: { value: "bug" } });
+    changeSelect("Label", "bug");
 
     await waitFor(() => expect(screen.queryByText("Add theme")).not.toBeInTheDocument());
     expect(screen.getByText("Fix login")).toBeInTheDocument();
@@ -93,7 +99,7 @@ describe("Backlog", () => {
     expect(titles()).toEqual(["alpha", "bravo", "charlie"]);
 
     // Sort by created ascending.
-    fireEvent.change(screen.getByLabelText("Sort by"), { target: { value: "created" } });
+    changeSelect("Sort by", "Created");
     await waitFor(() => expect(titles()).toEqual(["bravo", "charlie", "alpha"]));
 
     // Toggle to descending.
@@ -114,8 +120,86 @@ describe("Backlog", () => {
 
     await waitFor(() => expect(screen.getByText("Fix login")).toBeInTheDocument());
 
-    fireEvent.change(screen.getByLabelText("Type"), { target: { value: "local" } });
+    changeSelect("Type", "Local");
 
     await waitFor(() => expect(screen.getByText(/no items match/i)).toBeInTheDocument());
+  });
+});
+
+describe("Backlog pagination", () => {
+  beforeEach(async () => {
+    await resetDb();
+    window.localStorage.clear();
+  });
+
+  async function seedIssues(count: number) {
+    for (let index = 1; index <= count; index += 1) {
+      await githubItemRepo.upsert(makeGithubItem({ number: index, title: `Card ${index}` }));
+    }
+  }
+
+  it("hides the pager while everything fits one page (≤25 items)", async () => {
+    await seedIssues(25);
+
+    renderBacklog();
+
+    await waitFor(() => expect(screen.getByText("Card 1")).toBeInTheDocument());
+    expect(backlogItems()).toHaveLength(25);
+    expect(screen.queryByTestId("backlog-pager")).not.toBeInTheDocument();
+  });
+
+  it("shows the pager above 25 items and pages through 25-per-page slices", async () => {
+    await seedIssues(30);
+
+    renderBacklog();
+
+    await waitFor(() => expect(screen.getByText("Card 1")).toBeInTheDocument());
+
+    const pager = screen.getByTestId("backlog-pager");
+    expect(pager).toHaveTextContent("Page 1 of 2");
+    expect(backlogItems()).toHaveLength(25);
+
+    fireEvent.click(screen.getByRole("button", { name: "Next page" }));
+
+    await waitFor(() => expect(pager).toHaveTextContent("Page 2 of 2"));
+    expect(backlogItems()).toHaveLength(5);
+
+    fireEvent.click(screen.getByRole("button", { name: "Previous page" }));
+    await waitFor(() => expect(pager).toHaveTextContent("Page 1 of 2"));
+    expect(backlogItems()).toHaveLength(25);
+  });
+
+  it("resets to page 1 whenever a filter changes", async () => {
+    await seedIssues(40);
+
+    renderBacklog();
+
+    await waitFor(() => expect(screen.getByText("Card 1")).toBeInTheDocument());
+
+    fireEvent.click(screen.getByRole("button", { name: "Next page" }));
+    await waitFor(() =>
+      expect(screen.getByTestId("backlog-pager")).toHaveTextContent("Page 2 of 2"),
+    );
+
+    // Re-apply an equivalent type filter: same result set (>25), new view
+    // signature — must land back on page 1.
+    changeSelect("Type", "Issues");
+
+    await waitFor(() =>
+      expect(screen.getByTestId("backlog-pager")).toHaveTextContent("Page 1 of 2"),
+    );
+  });
+
+  it("changes the page size through the pager's own select", async () => {
+    await seedIssues(30);
+
+    renderBacklog();
+
+    await waitFor(() => expect(screen.getByText("Card 1")).toBeInTheDocument());
+
+    changeSelect("Rows per page", "50 / page");
+
+    await waitFor(() => expect(backlogItems()).toHaveLength(30));
+    expect(screen.getByTestId("backlog-pager")).toHaveTextContent("Page 1 of 1");
   });
 });

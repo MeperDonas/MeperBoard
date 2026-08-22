@@ -16,6 +16,12 @@ function renderLocalCards() {
   return { client, ...utils };
 }
 
+/** Drive the custom popover select (round 3): open, then pick an option. */
+function changeSelect(name: string, optionLabel: string) {
+  fireEvent.click(screen.getByRole("combobox", { name }));
+  fireEvent.click(screen.getByRole("option", { name: optionLabel }));
+}
+
 /** Wait for the create form to appear (i.e. the list query has resolved). */
 async function waitForForm() {
   await waitFor(() =>
@@ -59,9 +65,7 @@ describe("LocalCards", () => {
     fireEvent.change(screen.getByLabelText("New card title"), {
       target: { value: "Ship v1" },
     });
-    fireEvent.change(screen.getByLabelText("New card status"), {
-      target: { value: "doing" },
-    });
+    changeSelect("New card status", "Doing");
     fireEvent.click(screen.getByRole("button", { name: "Add card" }));
 
     await waitFor(() => expect(screen.getByText("Ship v1")).toBeInTheDocument());
@@ -92,9 +96,7 @@ describe("LocalCards", () => {
     fireEvent.change(screen.getByLabelText("Edit card title"), {
       target: { value: "Buy oat milk" },
     });
-    fireEvent.change(screen.getByLabelText("Edit card status"), {
-      target: { value: "done" },
-    });
+    changeSelect("Edit card status", "Done");
     fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
 
     await waitFor(() => expect(screen.getByText("Buy oat milk")).toBeInTheDocument());

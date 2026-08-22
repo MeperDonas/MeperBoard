@@ -1,12 +1,12 @@
 "use client";
 
-import { ChevronDown } from "lucide-react";
 import { useState, type FormEvent, type ReactNode } from "react";
 
 import type { LocalItem } from "../../data/types";
 import type { LocalStatus } from "../../domain/columns";
 import { localStatusStrategy } from "../../domain/columns";
 import { useLocalCards } from "../../state";
+import { Select } from "../ui/select";
 
 const STATUS_OPTIONS: { value: LocalStatus; label: string }[] = [
   { value: "todo", label: "To Do" },
@@ -22,9 +22,6 @@ const STATUS_LABEL: Record<LocalStatus, string> = {
 
 const inputClassName =
   "w-full rounded-lg border bg-background px-3 py-2 text-sm text-foreground transition-colors duration-150 placeholder:text-muted-foreground/70 hover:border-foreground/20";
-
-const selectClassName =
-  "w-full appearance-none rounded-lg border bg-background py-1.5 pl-2.5 pr-8 text-sm text-foreground transition-colors duration-150 hover:border-foreground/20";
 
 /**
  * Local-card management (spec local-cards): create, edit, and delete cards in
@@ -87,27 +84,16 @@ export function LocalCards() {
           className={inputClassName}
         />
         <div className="flex items-center gap-3">
-          <label className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+          <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
             Status
-            <span className="relative inline-flex items-center">
-              <select
-                value={status}
-                onChange={(event) => setStatus(event.target.value as LocalStatus)}
-                aria-label="New card status"
-                className={selectClassName}
-              >
-                {STATUS_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown
-                className="pointer-events-none absolute right-2 h-3.5 w-3.5 text-muted-foreground"
-                aria-hidden="true"
-              />
-            </span>
-          </label>
+            <Select
+              aria-label="New card status"
+              options={STATUS_OPTIONS}
+              value={status}
+              onValueChange={(next) => setStatus(next as LocalStatus)}
+              className="w-28"
+            />
+          </div>
           <button
             type="submit"
             disabled={!title.trim() || create.isPending}
@@ -232,27 +218,16 @@ function LocalCardEditForm({
           className={inputClassName}
         />
         <div className="flex items-center gap-3">
-          <label className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+          <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
             Status
-            <span className="relative inline-flex items-center">
-              <select
-                value={status}
-                onChange={(event) => setStatus(event.target.value as LocalStatus)}
-                aria-label="Edit card status"
-                className={selectClassName}
-              >
-                {STATUS_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown
-                className="pointer-events-none absolute right-2 h-3.5 w-3.5 text-muted-foreground"
-                aria-hidden="true"
-              />
-            </span>
-          </label>
+            <Select
+              aria-label="Edit card status"
+              options={STATUS_OPTIONS}
+              value={status}
+              onValueChange={(next) => setStatus(next as LocalStatus)}
+              className="w-28"
+            />
+          </div>
           <button
             type="submit"
             disabled={!title.trim()}
