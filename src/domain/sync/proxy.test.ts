@@ -4,6 +4,8 @@ import {
   GITHUB_API_BASE,
   buildGithubApiUrl,
   isAllowedMethod,
+  isAllowedOrigin,
+  isAllowedPath,
   proxyGithubRequest,
   resolveToken,
 } from "./proxy";
@@ -57,6 +59,56 @@ describe("resolveToken", () => {
 
   it("returns null with neither source", () => {
     expect(resolveToken({}, () => null)).toBeNull();
+  });
+});
+
+describe("isAllowedOrigin", () => {
+  it("accepts an Origin matching the allowlist", () => {
+    expect(isAllowedOrigin("https://meperboard.vercel.app", undefined, "https://meperboard.vercel.app")).toBe(true);
+  });
+
+  it("rejects an Origin not in the allowlist", () => {
+    expect(isAllowedOrigin("https://evil.example.com", undefined, "https://meperboard.vercel.app")).toBe(false);
+  });
+
+  it("accepts a Referer under the allowed origin when Origin is absent", () => {
+    expect(isAllowedOrigin(undefined, "https://meperboard.vercel.app/board", "https://meperboard.vercel.app")).toBe(true);
+  });
+
+  it("rejects when both Origin and Referer are absent", () => {
+    expect(isAllowedOrigin(undefined, undefined, "https://meperboard.vercel.app")).toBe(false);
+  });
+
+  it("accepts any of several allowlisted origins (dev + prod)", () => {
+    const allowed = "http://localhost:3000, https://meperboard.vercel.app";
+    expect(isAllowedOrigin("http://localhost:3000", undefined, allowed)).toBe(true);
+    expect(isAllowedOrigin("https://meperboard.vercel.app", undefined, allowed)).toBe(true);
+  });
+});
+
+describe("isAllowedPath", () => {
+  it("allows repos/{owner}/{repo}/issues", () => {
+    expect(isAllowedPath(["repos", "meperdonas", "meperboard", "issues"])).toBe(true);
+  });
+
+  it("allows repos/{owner}/{repo}/pulls", () => {
+    expect(isAllowedPath(["repos", "meperdonas", "meperboard", "pulls"])).toBe(true);
+  });
+
+  it("allows a single-item issue path variant", () => {
+    expect(isAllowedPath(["repos", "meperdonas", "meperboard", "issues", "56"])).toBe(true);
+  });
+
+  it("rejects a non-sync path like user/repos", () => {
+    expect(isAllowedPath(["user", "repos"])).toBe(false);
+  });
+
+  it("rejects unrelated resource paths", () => {
+    expect(isAllowedPath(["repos", "meperdonas", "meperboard", "comments"])).toBe(false);
+  });
+
+  it("rejects a path missing the resource segment", () => {
+    expect(isAllowedPath(["repos", "meperdonas", "meperboard"])).toBe(false);
   });
 });
 

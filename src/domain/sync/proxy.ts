@@ -31,6 +31,52 @@ export function isAllowedMethod(method: string): boolean {
 }
 
 /**
+ * Origin/Referer allowlist check. The relay is only reachable from the app's
+ * own origin, so an absent or mismatched `Origin`/`Referer` is rejected.
+ *
+ * - `allowed` is a comma-separated list of origins (prod origin, plus the dev
+ *   localhost origin when running outside production).
+ * - A Referer under an allowed origin is treated as valid (the Referer carries
+ *   a path, so only its origin is compared).
+ */
+export function isAllowedOrigin(
+  origin: string | undefined,
+  referer: string | undefined,
+  allowed: string,
+): boolean {
+  const allowedOrigins = allowed
+    .split(",")
+    .map((originValue) => originValue.trim())
+    .filter(Boolean);
+  if (allowedOrigins.length === 0) return false;
+
+  const candidate = origin || referer;
+  if (!candidate) return false;
+
+  let candidateOrigin: string;
+  try {
+    candidateOrigin = new URL(candidate).origin;
+  } catch {
+    candidateOrigin = candidate;
+  }
+
+  return allowedOrigins.includes(candidateOrigin);
+}
+
+/**
+ * Path allowlist. The relay is a thin read-only GitHub proxy that only exposes
+ * the sync paths the app needs: `repos/{owner}/{repo}/issues` and
+ * `repos/{owner}/{repo}/pulls` (plus their single-item variants). Anything else
+ * — including `user/repos` — is rejected.
+ */
+export function isAllowedPath(path: string[]): boolean {
+  if (path.length < 2 || path[0] !== "repos") return false;
+  const resource = path[3];
+  if (resource !== "issues" && resource !== "pulls") return false;
+  return true;
+}
+
+/**
  * Resolve the GitHub PAT. Prefers the server-side `GITHUB_TOKEN` env var and
  * falls back to `gh auth token`. Never hardcodes a token; anonymous (null) is
  * allowed but rate-limited.
