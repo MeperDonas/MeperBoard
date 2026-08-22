@@ -19,13 +19,4 @@ export {
   type RateLimiterOptions,
   type RetryOutcome,
 } from "./rate-limiter";
-export {
-  GITHUB_API_BASE,
-  buildGithubApiUrl,
-  getGhAuthToken,
-  isAllowedMethod,
-  proxyGithubRequest,
-  resolveToken,
-  type ProxyDeps,
-  type ProxyResult,
-} from "./proxy";
+

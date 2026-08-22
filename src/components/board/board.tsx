@@ -160,7 +160,7 @@ export function Board({ onMoveCard }: BoardProps) {
       <div className="flex h-full flex-col p-4 md:px-6" role="region" aria-label="Kanban board">
         {totalCards === 0 ? <EmptyState /> : null}
         <LayoutGroup>
-          <div className="flex h-full gap-3 overflow-x-auto pb-2">
+          <div className="flex flex-1 min-h-0 gap-3 overflow-x-auto pb-2 no-scrollbar">
             {effective.columns.map((column) => (
               <BoardColumn
                 key={column.id}
@@ -242,7 +242,7 @@ function BoardColumn({
           {total}
         </span>
       </header>
-      <ul className="flex flex-1 min-h-0 flex-col gap-2 overflow-y-auto pr-0.5">
+      <ul className="flex flex-1 min-h-0 flex-col gap-2 overflow-y-auto pr-0.5 no-scrollbar">
         {column.cards.length === 0 ? (
           <li className="flex items-center justify-center rounded-lg border border-dashed py-8">
             <span className="text-xs text-muted-foreground">No cards</span>

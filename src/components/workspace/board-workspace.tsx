@@ -168,8 +168,8 @@ function RailLayout({ collapsed }: { collapsed: boolean }) {
     <div
       className={cn(
         "flex h-full flex-col",
-        !collapsed && "gap-4 lg:flex-row lg:items-start lg:gap-4",
-        collapsed && "flex-col lg:flex-row lg:items-start",
+        !collapsed && "gap-4 lg:flex-row lg:gap-4",
+        collapsed && "flex-col lg:flex-row",
       )}
     >
       <div className="h-full min-w-0 flex-1 overflow-hidden">
@@ -192,7 +192,7 @@ function RailLayout({ collapsed }: { collapsed: boolean }) {
         transition={reduceMotion ? { duration: 0 } : SPRING_RAIL}
         aria-hidden={collapsed || undefined}
         inert={collapsed || undefined}
-        className="h-full shrink-0 overflow-y-auto overflow-x-hidden"
+        className="h-full shrink-0 overflow-y-auto overflow-x-hidden no-scrollbar"
       >
         <div className="w-full min-w-0 p-4 lg:w-[340px] lg:p-0 lg:pr-6 lg:pt-4">
           <LocalCards />

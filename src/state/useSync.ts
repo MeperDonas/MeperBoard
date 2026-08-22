@@ -3,7 +3,7 @@ import { useMemo } from "react";
 
 import { githubItemRepo } from "../data/repositories";
 import type { GithubItem } from "../data/types";
-import { GitHubConnector } from "../domain/sync";
+import { GitHubConnector } from "../domain/sync/connector";
 import { queryKeys } from "./query-keys";
 
 const GITHUB_API_ORIGIN = "https://api.github.com";
