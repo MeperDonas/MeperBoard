@@ -16,6 +16,7 @@ import { useEffect, useState } from "react";
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
 import { formatState } from "../ui/card-meta";
+import { MarkdownContent } from "../ui/MarkdownContent";
 import { Select } from "../ui/select";
 import { formatRelativeShort } from "../../lib/relative-date";
 import type { Card } from "../../state/cards";
@@ -274,9 +275,7 @@ export function CardPreviewDrawer({
                 </h3>
                 {card.body && card.body.trim().length > 0 ? (
                   <div className="mt-2.5 rounded-lg border border-border/60 bg-background/50 p-4">
-                    <p className="whitespace-pre-wrap font-sans text-sm leading-relaxed text-foreground/90">
-                      {card.body}
-                    </p>
+                    <MarkdownContent content={card.body} />
                   </div>
                 ) : (
                   <p className="mt-2 text-xs italic text-muted-foreground">

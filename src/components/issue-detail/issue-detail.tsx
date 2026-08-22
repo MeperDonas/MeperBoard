@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 
 import { Badge } from "../ui/badge";
 import { formatState } from "../ui/card-meta";
+import { MarkdownContent } from "../ui/MarkdownContent";
 
 import { cn } from "../../lib/utils";
 import type { GithubItem, RepoId } from "../../data/types";
@@ -110,11 +111,9 @@ function IssueDetailView({ item }: { item: GithubItem }) {
         <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
           Description
         </h3>
-        {item.body.trim() === "" ? (
-          <p className="mt-2 text-sm text-muted-foreground">No description provided.</p>
-        ) : (
-          <p className="mt-2 whitespace-pre-wrap text-sm leading-6">{item.body}</p>
-        )}
+        <div className="mt-2">
+          <MarkdownContent content={item.body} />
+        </div>
       </section>
 
       <section className="mt-6">

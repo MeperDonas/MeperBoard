@@ -1,9 +1,12 @@
 import { describe, expect, it, vi } from "vitest";
 
+import * as proxyModule from "./proxy";
 import {
   GITHUB_API_BASE,
   buildGithubApiUrl,
   isAllowedMethod,
+  isAllowedOrigin,
+  isAllowedPath,
   proxyGithubRequest,
   resolveToken,
 } from "./proxy";
@@ -47,16 +50,68 @@ describe("isAllowedMethod", () => {
 });
 
 describe("resolveToken", () => {
-  it("prefers GITHUB_TOKEN over the gh fallback", () => {
-    expect(resolveToken({ GITHUB_TOKEN: "pat" }, () => "gh-token")).toBe("pat");
+  it("returns the GITHUB_TOKEN when set", () => {
+    expect(resolveToken({ GITHUB_TOKEN: "pat" })).toBe("pat");
   });
 
-  it("falls back to the gh token when GITHUB_TOKEN is unset", () => {
-    expect(resolveToken({}, () => "gh-token")).toBe("gh-token");
+  it("returns null when GITHUB_TOKEN is unset", () => {
+    expect(resolveToken({})).toBeNull();
+  });
+});
+
+describe("shell/subprocess boundary", () => {
+  it("no longer exposes a gh-auth-token subprocess helper", () => {
+    expect((proxyModule as Record<string, unknown>).getGhAuthToken).toBeUndefined();
+  });
+});
+
+describe("isAllowedOrigin", () => {
+  it("accepts an Origin matching the allowlist", () => {
+    expect(isAllowedOrigin("https://meperboard.vercel.app", undefined, "https://meperboard.vercel.app")).toBe(true);
   });
 
-  it("returns null with neither source", () => {
-    expect(resolveToken({}, () => null)).toBeNull();
+  it("rejects an Origin not in the allowlist", () => {
+    expect(isAllowedOrigin("https://evil.example.com", undefined, "https://meperboard.vercel.app")).toBe(false);
+  });
+
+  it("accepts a Referer under the allowed origin when Origin is absent", () => {
+    expect(isAllowedOrigin(undefined, "https://meperboard.vercel.app/board", "https://meperboard.vercel.app")).toBe(true);
+  });
+
+  it("rejects when both Origin and Referer are absent", () => {
+    expect(isAllowedOrigin(undefined, undefined, "https://meperboard.vercel.app")).toBe(false);
+  });
+
+  it("accepts any of several allowlisted origins (dev + prod)", () => {
+    const allowed = "http://localhost:3000, https://meperboard.vercel.app";
+    expect(isAllowedOrigin("http://localhost:3000", undefined, allowed)).toBe(true);
+    expect(isAllowedOrigin("https://meperboard.vercel.app", undefined, allowed)).toBe(true);
+  });
+});
+
+describe("isAllowedPath", () => {
+  it("allows repos/{owner}/{repo}/issues", () => {
+    expect(isAllowedPath(["repos", "meperdonas", "meperboard", "issues"])).toBe(true);
+  });
+
+  it("allows repos/{owner}/{repo}/pulls", () => {
+    expect(isAllowedPath(["repos", "meperdonas", "meperboard", "pulls"])).toBe(true);
+  });
+
+  it("allows a single-item issue path variant", () => {
+    expect(isAllowedPath(["repos", "meperdonas", "meperboard", "issues", "56"])).toBe(true);
+  });
+
+  it("rejects a non-sync path like user/repos", () => {
+    expect(isAllowedPath(["user", "repos"])).toBe(false);
+  });
+
+  it("rejects unrelated resource paths", () => {
+    expect(isAllowedPath(["repos", "meperdonas", "meperboard", "comments"])).toBe(false);
+  });
+
+  it("rejects a path missing the resource segment", () => {
+    expect(isAllowedPath(["repos", "meperdonas", "meperboard"])).toBe(false);
   });
 });
 
