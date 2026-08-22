@@ -1,8 +1,8 @@
-"use client";
-
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { Undo2 } from "lucide-react";
 import { useEffect } from "react";
+
+import { EASE_TOAST } from "../../lib/motion";
 
 /**
  * Bottom-center undo toast for board column moves (UX round 2). Announced via
@@ -44,8 +44,8 @@ export function MoveToast({ toast, onUndo, onDismiss }: MoveToastProps) {
             key={toast.key}
             initial={reduceMotion ? false : { opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={reduceMotion ? undefined : { opacity: 0, y: 8 }}
-            transition={{ duration: 0.18, ease: "easeOut" }}
+            exit={reduceMotion ? undefined : { opacity: 0, y: 12 }}
+            transition={EASE_TOAST}
             className="pointer-events-auto flex items-center gap-3 rounded-lg border bg-elevated px-3.5 py-2.5 shadow-lg"
           >
             <span className="text-sm text-foreground">

@@ -49,13 +49,19 @@ export function AppHeader() {
               href={item.href}
               aria-current={active ? "page" : undefined}
               className={cn(
-                "rounded-md px-2.5 py-1.5 text-sm font-medium transition-colors duration-150",
+                "relative rounded-md px-2.5 py-1.5 text-sm font-medium transition-colors duration-150",
                 active
-                  ? "bg-accent text-foreground"
+                  ? "font-semibold text-foreground"
                   : "text-muted-foreground hover:bg-accent/60 hover:text-foreground",
               )}
             >
               {item.label}
+              {active && (
+                <span
+                  className="absolute -bottom-[9px] left-1 right-1 h-0.5 rounded-full bg-primary"
+                  aria-hidden="true"
+                />
+              )}
             </Link>
           );
         })}

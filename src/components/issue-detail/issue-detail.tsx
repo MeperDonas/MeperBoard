@@ -3,6 +3,9 @@
 import { ExternalLink } from "lucide-react";
 import type { ReactNode } from "react";
 
+import { Badge } from "../ui/badge";
+import { formatState } from "../ui/card-meta";
+
 import { cn } from "../../lib/utils";
 import type { GithubItem, RepoId } from "../../data/types";
 import { useIssueDetail } from "../../state";
@@ -95,11 +98,8 @@ function IssueDetailView({ item }: { item: GithubItem }) {
         ) : (
           <ul className="mt-2 flex flex-wrap gap-1.5">
             {item.labels.map((label) => (
-              <li
-                key={label}
-                className="rounded-full border px-2.5 py-0.5 text-xs text-muted-foreground"
-              >
-                {label}
+              <li key={label}>
+                <Badge variant="outline">{label}</Badge>
               </li>
             ))}
           </ul>
@@ -125,14 +125,30 @@ function IssueDetailView({ item }: { item: GithubItem }) {
           <p className="mt-2 text-sm text-muted-foreground">No linked pull requests.</p>
         ) : (
           <ul className="mt-2 flex flex-wrap gap-1.5">
-            {item.linked_prs.map((pr) => (
-              <li
-                key={pr}
-                className="rounded-md bg-muted px-2 py-0.5 text-xs tabular-nums text-muted-foreground"
-              >
-                #{pr}
-              </li>
-            ))}
+            {item.linked_prs.map((pr) => {
+              const prUrl = item.html_url
+                ? item.html_url.replace(/\/issues\/\d+$/, "").replace(/\/pull\/\d+$/, "") + `/pull/${pr}`
+                : null;
+              return (
+                <li key={pr}>
+                  {prUrl ? (
+                    <a
+                      href={prUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center gap-1 rounded-md bg-muted px-2 py-0.5 text-xs tabular-nums text-link transition-colors duration-150 hover:underline hover:underline-offset-4"
+                    >
+                      #{pr}
+                      <ExternalLink className="h-3 w-3" aria-hidden="true" />
+                    </a>
+                  ) : (
+                    <span className="rounded-md bg-muted px-2 py-0.5 text-xs tabular-nums text-muted-foreground">
+                      #{pr}
+                    </span>
+                  )}
+                </li>
+              );
+            })}
           </ul>
         )}
       </section>
@@ -172,6 +188,4 @@ function IssueDetailSkeleton() {
   );
 }
 
-function formatState(state: string): string {
-  return state.charAt(0).toUpperCase() + state.slice(1);
-}
+

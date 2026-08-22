@@ -12,12 +12,19 @@ import {
   type DragStartEvent,
 } from "@dnd-kit/core";
 import { LayoutGroup, motion, useReducedMotion } from "framer-motion";
-import { AlertCircle, GripVertical, Inbox, MoveLeft, MoveRight } from "lucide-react";
+import {
+  AlertCircle,
+  AlertTriangle,
+  GripVertical,
+  Inbox,
+  MoveLeft,
+  MoveRight,
+} from "lucide-react";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 
 import { cn } from "../../lib/utils";
-import { remainingCardCount, visibleCardCount } from "../../lib/capping";
 import { MAX_WIP_PER_COLUMN } from "../../lib/config";
+import { SPRING_CARD_FLIGHT, SPRING_GHOST_LIFT } from "../../lib/motion";
 import { useBoard, type Board, type BoardColumn as BoardColumnType, type Card } from "../../state";
 import { Badge } from "../ui/badge";
 import { CardMetaRow } from "../ui/card-meta";
@@ -30,9 +37,6 @@ export interface BoardProps {
   /** Invoked when a card moves between columns, for consumers to persist. */
   onMoveCard?: (move: BoardMove) => void;
 }
-
-/** Tuned flight between/reorder within columns — snappy takeoff, soft landing. */
-const CARD_FLIGHT_SPRING = { type: "spring", stiffness: 500, damping: 40, mass: 0.9 } as const;
 
 /** DragOverlay ghost lift relative to its resting size (≤ ~1.03 keeps text crisp). */
 const GHOST_SCALE = 1.03;
@@ -49,16 +53,13 @@ const FLIGHT_DIP_KEYFRAMES = [0.96, 1];
  * pointer drag (dnd-kit) and a keyboard/single-pointer alternative (move
  * left/right controls), so a drag gesture is never required (WCAG 2.2 AA).
  *
- * UX round 2 adds: a DragOverlay ghost while dragging (the origin slot dims),
- * shared-layout flight when cards land or reorder (framer-motion `layoutId`),
- * per-column windowing ("Show N more") so huge columns stay cheap, a WIP
- * warning on over-limit columns, and an undo toast after each move.
- *
- * UX round 3 re-tunes the flight to feel premium: the ghost lifts with a
- * ~1.03x scale + slight tilt + elevation-3 shadow; flights use a tuned spring
- * (stiffness 500 / damping 40 / mass 0.9) with a subtle mid-flight scale dip;
- * the landing column pulses an accent ring (~300ms fade). Every motion path
- * is gated on `useReducedMotion` — framer-motion ignores CSS kill blocks.
+ * UX overhaul:
+ * - Full viewport height constraint with isolated per-column scrolling.
+ * - Progressive disclosure: drag handle and move arrows are hidden at rest,
+ *   smoothly revealed on card hover or focus-within to eliminate visual clutter.
+ * - Accurate ghost card sizing (w-72 matching column width).
+ * - Per-column empty states and accessible WIP warning indicators.
+ * - Motion tuned with centralized spring dynamics.
  *
  * The board remains read-only: it renders cards and reports moves via
  * `onMoveCard`; it never writes to GitHub or the local store itself.
@@ -71,7 +72,6 @@ export function Board({ onMoveCard }: BoardProps) {
   );
   const [moves, setMoves] = useState<Record<string, string>>({});
   const [activeId, setActiveId] = useState<string | null>(null);
-  const [expandedSteps, setExpandedSteps] = useState<Record<string, number>>({});
   const [toast, setToast] = useState<MoveToastState | null>(null);
   const [pulse, setPulse] = useState<{ columnId: string; key: number } | null>(null);
   const [flight, setFlight] = useState<{ cardId: string; key: number } | null>(null);
@@ -150,10 +150,6 @@ export function Board({ onMoveCard }: BoardProps) {
     if (target) handleMove(cardId, target);
   }
 
-  function handleExpand(columnId: string) {
-    setExpandedSteps((previous) => ({ ...previous, [columnId]: (previous[columnId] ?? 0) + 1 }));
-  }
-
   return (
     <DndContext
       sensors={sensors}
@@ -161,18 +157,16 @@ export function Board({ onMoveCard }: BoardProps) {
       onDragEnd={handleDragEnd}
       onDragCancel={() => setActiveId(null)}
     >
-      <div className="p-4 md:px-6" role="region" aria-label="Kanban board">
+      <div className="flex h-full flex-col p-4 md:px-6" role="region" aria-label="Kanban board">
         {totalCards === 0 ? <EmptyState /> : null}
         <LayoutGroup>
-          <div className="flex gap-3 overflow-x-auto pb-2">
+          <div className="flex h-full gap-3 overflow-x-auto pb-2">
             {effective.columns.map((column) => (
               <BoardColumn
                 key={column.id}
                 column={column}
                 pulse={pulse}
                 flight={flight}
-                expandedSteps={expandedSteps[column.id] ?? 0}
-                onExpand={() => handleExpand(column.id)}
                 onMoveRelative={handleMoveRelative}
                 reduceMotion={reduceMotion}
               />
@@ -192,26 +186,19 @@ function BoardColumn({
   column,
   pulse,
   flight,
-  expandedSteps,
-  onExpand,
   onMoveRelative,
   reduceMotion,
 }: {
   column: BoardColumnType;
   pulse: { columnId: string; key: number } | null;
   flight: { cardId: string; key: number } | null;
-  expandedSteps: number;
-  onExpand: () => void;
   onMoveRelative: (cardId: string, delta: -1 | 1) => void;
   reduceMotion: boolean;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: column.id });
 
-  // The header pill always shows the TRUE total; the list below is windowed.
   const total = column.cards.length;
   const overWip = total > MAX_WIP_PER_COLUMN;
-  const hiddenCount = remainingCardCount(total, expandedSteps);
-  const visibleCards = column.cards.slice(0, visibleCardCount(total, expandedSteps));
 
   return (
     <section
@@ -219,7 +206,7 @@ function BoardColumn({
       data-column-id={column.id}
       aria-label={`${column.title} column`}
       className={cn(
-        "relative flex min-h-48 w-72 shrink-0 flex-col rounded-xl border bg-card p-2 transition-colors duration-150",
+        "relative flex h-full max-h-full w-72 shrink-0 flex-col rounded-xl border bg-card p-2 transition-colors duration-150",
         isOver && "border-primary/60 bg-primary/5 ring-1 ring-primary/30",
       )}
     >
@@ -240,36 +227,36 @@ function BoardColumn({
         <span
           title={overWip ? `More than ${MAX_WIP_PER_COLUMN} cards in this column` : undefined}
           className={cn(
-            "min-w-6 rounded-full px-2 py-0.5 text-center text-xs tabular-nums",
+            "inline-flex items-center gap-1 min-w-6 rounded-full px-2 py-0.5 text-center text-xs tabular-nums",
             overWip
               ? "border border-warning/30 bg-warning/10 text-warning"
               : "bg-muted text-muted-foreground",
           )}
         >
+          {overWip && (
+            <AlertTriangle
+              className="h-3 w-3 text-warning"
+              aria-label="Column over WIP limit"
+            />
+          )}
           {total}
         </span>
       </header>
-      <ul className="flex flex-1 flex-col gap-2">
-        {visibleCards.map((card) => (
-          <BoardCard
-            key={card.id}
-            card={card}
-            dipping={flight?.cardId === card.id}
-            onMoveRelative={onMoveRelative}
-            reduceMotion={reduceMotion}
-          />
-        ))}
-        {hiddenCount > 0 && (
-          <li>
-            <button
-              type="button"
-              onClick={onExpand}
-              aria-label={`Show ${hiddenCount} more cards in ${column.title}`}
-              className="w-full rounded-lg border border-dashed px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors duration-150 hover:bg-muted hover:text-foreground"
-            >
-              Show {hiddenCount} more
-            </button>
+      <ul className="flex flex-1 min-h-0 flex-col gap-2 overflow-y-auto pr-0.5">
+        {column.cards.length === 0 ? (
+          <li className="flex items-center justify-center rounded-lg border border-dashed py-8">
+            <span className="text-xs text-muted-foreground">No cards</span>
           </li>
+        ) : (
+          column.cards.map((card) => (
+            <BoardCard
+              key={card.id}
+              card={card}
+              dipping={flight?.cardId === card.id}
+              onMoveRelative={onMoveRelative}
+              reduceMotion={reduceMotion}
+            />
+          ))
         )}
       </ul>
     </section>
@@ -294,16 +281,15 @@ function BoardCard({
 
   return (
     // Shared layoutId lets framer-motion fly the card between columns with a
-    // tuned spring (stiffness 500 / damping 40 / mass 0.9); reduced-motion
-    // users get an instant swap instead.
+    // tuned spring; reduced-motion users get an instant swap instead.
     <motion.li
       ref={setNodeRef}
       layoutId={reduceMotion ? undefined : card.id}
-      transition={reduceMotion ? { duration: 0 } : CARD_FLIGHT_SPRING}
+      transition={reduceMotion ? { duration: 0 } : SPRING_CARD_FLIGHT}
       initial={reduceMotion ? false : { opacity: 0 }}
       animate={{ opacity: 1 }}
       className={cn(
-        "rounded-lg border bg-elevated p-3 text-card-foreground shadow-xs transition-colors duration-150 hover:border-foreground/20",
+        "group rounded-lg border bg-elevated p-3 text-card-foreground shadow-xs transition-colors duration-150 hover:border-foreground/20",
         isDragging && "opacity-40 shadow-lg",
       )}
     >
@@ -311,7 +297,7 @@ function BoardCard({
         // `flight` only exists when reduced motion is off (Board gates it),
         // so a true `dipping` here always means "play the dip".
         animate={dipping ? { scale: FLIGHT_DIP_KEYFRAMES } : { scale: 1 }}
-        transition={CARD_FLIGHT_SPRING}
+        transition={SPRING_CARD_FLIGHT}
         style={{ transformOrigin: "center top" }}
       >
         <div className="flex items-start gap-2">
@@ -321,7 +307,7 @@ function BoardCard({
             {...attributes}
             type="button"
             aria-label={`Drag ${card.title}`}
-            className="mt-0.5 shrink-0 cursor-grab rounded text-muted-foreground transition-colors duration-150 hover:text-foreground active:cursor-grabbing"
+            className="mt-0.5 shrink-0 cursor-grab rounded text-muted-foreground opacity-0 transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100 hover:text-foreground active:cursor-grabbing"
           >
             <GripVertical className="h-4 w-4" aria-hidden="true" />
           </button>
@@ -345,7 +331,7 @@ function BoardCard({
           </div>
         </div>
 
-        <div className="mt-2 flex items-center gap-1 border-t pt-2">
+        <div className="mt-2 flex items-center gap-1 border-t pt-2 opacity-0 transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100">
           <button
             type="button"
             aria-label={`Move ${card.title} left`}
@@ -382,8 +368,8 @@ function GhostCard({ card, reduceMotion }: { card: Card; reduceMotion: boolean }
         scale: reduceMotion ? 1 : GHOST_SCALE,
         rotate: reduceMotion ? 0 : GHOST_TILT_DEG,
       }}
-      transition={CARD_FLIGHT_SPRING}
-      className="w-68 cursor-grabbing rounded-lg border bg-elevated p-3 text-card-foreground shadow-lg ring-1 ring-primary/30"
+      transition={reduceMotion ? { duration: 0 } : SPRING_GHOST_LIFT}
+      className="w-72 cursor-grabbing rounded-lg border bg-elevated p-3 text-card-foreground shadow-lg ring-1 ring-primary/30"
     >
       <p className="truncate text-sm font-medium leading-snug">{card.title}</p>
       <div className="mt-2 flex w-full items-center gap-2">

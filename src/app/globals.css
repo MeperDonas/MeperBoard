@@ -45,6 +45,7 @@
   --radius-xl: calc(var(--radius) + 4px);
   --shadow-xs: var(--elevation-1);
   --shadow-sm: var(--elevation-2);
+  --shadow-md: var(--elevation-2);
   --shadow-lg: var(--elevation-3);
 }
 
@@ -127,6 +128,10 @@
   *:focus-visible {
     outline: 2px solid var(--ring);
     outline-offset: 2px;
+  }
+  /* Prevent the focus ring from being clipped by rounded-full border radius. */
+  .rounded-full:focus-visible {
+    outline-offset: 3px;
   }
   ::selection {
     background: color-mix(in oklab, var(--primary) 30%, transparent);

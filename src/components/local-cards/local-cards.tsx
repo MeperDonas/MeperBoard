@@ -6,6 +6,8 @@ import type { LocalItem } from "../../data/types";
 import type { LocalStatus } from "../../domain/columns";
 import { localStatusStrategy } from "../../domain/columns";
 import { useLocalCards } from "../../state";
+import { Button } from "../ui/button";
+import { Input } from "../ui/input";
 import { Select } from "../ui/select";
 
 const STATUS_OPTIONS: { value: LocalStatus; label: string }[] = [
@@ -19,9 +21,6 @@ const STATUS_LABEL: Record<LocalStatus, string> = {
   doing: "Doing",
   done: "Done",
 };
-
-const inputClassName =
-  "w-full rounded-lg border bg-background px-3 py-2 text-sm text-foreground transition-colors duration-150 placeholder:text-muted-foreground/70 hover:border-foreground/20";
 
 /**
  * Local-card management (spec local-cards): create, edit, and delete cards in
@@ -68,12 +67,11 @@ export function LocalCards() {
         aria-label="New local card"
         className="mb-4 flex flex-col gap-2.5 rounded-xl border bg-card p-4 shadow-xs"
       >
-        <input
+        <Input
           value={title}
           onChange={(event) => setTitle(event.target.value)}
           placeholder="Card title"
           aria-label="New card title"
-          className={inputClassName}
         />
         <textarea
           value={body}
@@ -81,7 +79,7 @@ export function LocalCards() {
           placeholder="Description (optional)"
           aria-label="New card description"
           rows={2}
-          className={inputClassName}
+          className="w-full rounded-lg border bg-card px-3 py-1.5 text-sm text-foreground shadow-xs transition-colors duration-150 placeholder:text-muted-foreground/70 hover:border-foreground/20 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
         />
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
@@ -94,13 +92,15 @@ export function LocalCards() {
               className="w-28"
             />
           </div>
-          <button
+          <Button
             type="submit"
+            variant="primary"
+            size="sm"
             disabled={!title.trim() || create.isPending}
-            className="rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground transition-colors duration-150 hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-50"
+            loading={create.isPending}
           >
             Add card
-          </button>
+          </Button>
         </div>
       </form>
 
@@ -153,21 +153,25 @@ function LocalCardRow({
           {STATUS_LABEL[statusForColumn(card.column_id)]}
         </span>
       </div>
-      <button
+      <Button
         type="button"
+        variant="secondary"
+        size="sm"
         onClick={onEdit}
-        className="shrink-0 rounded-md border px-2.5 py-1 text-xs font-medium text-foreground transition-colors duration-150 hover:bg-muted"
+        className="h-7 px-2.5 text-xs"
       >
         Edit
-      </button>
-      <button
+      </Button>
+      <Button
         type="button"
+        variant="secondary"
+        size="sm"
         onClick={onDelete}
         aria-label="Delete"
-        className="shrink-0 rounded-md border px-2.5 py-1 text-xs font-medium text-foreground transition-colors duration-150 hover:border-destructive/40 hover:bg-muted hover:text-destructive"
+        className="h-7 px-2.5 text-xs hover:border-destructive/40 hover:text-destructive"
       >
         Delete
-      </button>
+      </Button>
     </li>
   );
 }
@@ -204,18 +208,17 @@ function LocalCardEditForm({
         aria-label={`Edit card ${card.title}`}
         className="flex flex-col gap-2.5 rounded-xl border border-primary/60 bg-card p-4 shadow-xs ring-1 ring-primary/20"
       >
-        <input
+        <Input
           value={title}
           onChange={(event) => setTitle(event.target.value)}
           aria-label="Edit card title"
-          className={inputClassName}
         />
         <textarea
           value={body}
           onChange={(event) => setBody(event.target.value)}
           aria-label="Edit card description"
           rows={2}
-          className={inputClassName}
+          className="w-full rounded-lg border bg-card px-3 py-1.5 text-sm text-foreground shadow-xs transition-colors duration-150 placeholder:text-muted-foreground/70 hover:border-foreground/20 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
         />
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
@@ -228,20 +231,22 @@ function LocalCardEditForm({
               className="w-28"
             />
           </div>
-          <button
+          <Button
             type="submit"
+            variant="primary"
+            size="sm"
             disabled={!title.trim()}
-            className="rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground transition-colors duration-150 hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-50"
           >
             Save changes
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
+            variant="secondary"
+            size="sm"
             onClick={onCancel}
-            className="rounded-lg border px-3 py-1.5 text-sm font-medium text-foreground transition-colors duration-150 hover:bg-muted"
           >
             Cancel
-          </button>
+          </Button>
         </div>
       </form>
     </li>
