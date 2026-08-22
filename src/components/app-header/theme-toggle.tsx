@@ -4,11 +4,7 @@ import { Moon, Sun } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { cn } from "../../lib/utils";
-
-type Theme = "dark" | "light";
-
-/** Keep in sync with the theme init script in app/layout.tsx. */
-const THEME_STORAGE_KEY = "meperboard-theme";
+import { applyThemeToDom, type ThemePreference } from "../../lib/theme-preference";
 
 /**
  * Dark/light theme switch. The initial theme is applied by the blocking script
@@ -18,21 +14,16 @@ const THEME_STORAGE_KEY = "meperboard-theme";
  * server and first client render always match.
  */
 export function ThemeToggle() {
-  const [theme, setTheme] = useState<Theme>("dark");
+  const [theme, setTheme] = useState<ThemePreference>("dark");
 
   useEffect(() => {
     setTheme(document.documentElement.classList.contains("dark") ? "dark" : "light");
   }, []);
 
   function handleToggle() {
-    const next: Theme = theme === "dark" ? "light" : "dark";
+    const next: ThemePreference = theme === "dark" ? "light" : "dark";
     setTheme(next);
-    document.documentElement.classList.toggle("dark", next === "dark");
-    try {
-      localStorage.setItem(THEME_STORAGE_KEY, next);
-    } catch {
-      // Storage unavailable (private mode, quota) — theme still applies for the session.
-    }
+    applyThemeToDom(next);
   }
 
   const isDark = theme === "dark";

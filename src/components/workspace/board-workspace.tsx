@@ -21,6 +21,7 @@ import {
 import { SPRING_RAIL } from "../../lib/motion";
 import { useMinWidth } from "../../lib/use-min-width";
 import { useBacklog, useLocalCards, useMoveCard, useResetCardMove, useSync, type Card } from "../../state";
+import { TOGGLE_LOCAL_CARDS_EVENT } from "../app-header/command-palette";
 import { AppHeader } from "../app-header/app-header";
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
@@ -52,6 +53,16 @@ export function BoardWorkspace() {
   useEffect(() => {
     saveLocalCardsCollapsed(collapsed);
   }, [collapsed]);
+
+  // The ⌘K palette's "Toggle local cards panel" command drives the same rail
+  // state the toolbar toggle owns, so the palette stays a single entry point.
+  useEffect(() => {
+    function handleToggleLocalCards() {
+      setCollapsed((prev) => !prev);
+    }
+    window.addEventListener(TOGGLE_LOCAL_CARDS_EVENT, handleToggleLocalCards);
+    return () => window.removeEventListener(TOGGLE_LOCAL_CARDS_EVENT, handleToggleLocalCards);
+  }, []);
 
   function toggle() {
     setCollapsed((prev) => !prev);
