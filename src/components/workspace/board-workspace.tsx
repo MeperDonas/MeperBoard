@@ -20,13 +20,14 @@ import {
 } from "../../lib/local-cards-collapsed";
 import { SPRING_RAIL } from "../../lib/motion";
 import { useMinWidth } from "../../lib/use-min-width";
-import { useBacklog, useLocalCards, useMoveCard, useSync } from "../../state";
+import { useBacklog, useLocalCards, useMoveCard, useSync, type Card } from "../../state";
 import { AppHeader } from "../app-header/app-header";
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
 import { Board } from "../board";
 import { LocalCards } from "../local-cards";
 
+import { CardPreviewDrawer } from "../preview-drawer/card-preview-drawer";
 import { SyncControl } from "./sync-control";
 
 /** Desktop width of the Local Cards rail (matches the round-1 grid column). */
@@ -40,10 +41,12 @@ const RAIL_WIDTH = 340;
  *
  * UX overhaul: constrained viewport height (no global scroll), secondary sync
  * button with icon state feedback, accessible rail toggle with Button primitive,
- * and unified Badge chips for issue/PR counts.
+ * unified Badge chips for issue/PR counts, and instant CardPreviewDrawer.
  */
 export function BoardWorkspace() {
   const [collapsed, setCollapsed] = useState<boolean>(() => loadLocalCardsCollapsed());
+  const [selectedCard, setSelectedCard] = useState<Card | null>(null);
+  const moveCard = useMoveCard();
 
   useEffect(() => {
     saveLocalCardsCollapsed(collapsed);
@@ -64,8 +67,22 @@ export function BoardWorkspace() {
       </div>
 
       <div className="flex-1 min-h-0 overflow-hidden">
-        <RailLayout collapsed={collapsed} />
+        <RailLayout collapsed={collapsed} onSelectCard={setSelectedCard} />
       </div>
+
+      <CardPreviewDrawer
+        card={selectedCard}
+        onClose={() => setSelectedCard(null)}
+        onMoveColumn={(cardId, toColumnId) => {
+          moveCard.mutate({
+            cardId,
+            toColumnId,
+          });
+          if (selectedCard) {
+            setSelectedCard({ ...selectedCard, columnId: toColumnId });
+          }
+        }}
+      />
     </div>
   );
 }
@@ -119,7 +136,13 @@ function LocalCountPill() {
  * tree (`aria-hidden` + `inert`) while the shrink animation plays, so hidden
  * form fields never join the tab order.
  */
-function RailLayout({ collapsed }: { collapsed: boolean }) {
+function RailLayout({
+  collapsed,
+  onSelectCard,
+}: {
+  collapsed: boolean;
+  onSelectCard: (card: Card) => void;
+}) {
   const isDesktop = useMinWidth(1024);
   const reduceMotion = useReducedMotion() ?? false;
   const moveCard = useMoveCard();
@@ -133,7 +156,10 @@ function RailLayout({ collapsed }: { collapsed: boolean }) {
       )}
     >
       <div className="h-full min-w-0 flex-1 overflow-hidden">
-        <Board onMoveCard={(move) => moveCard.mutate(move)} />
+        <Board
+          onMoveCard={(move) => moveCard.mutate(move)}
+          onSelectCard={onSelectCard}
+        />
       </div>
       <motion.aside
         id="local-cards-panel"

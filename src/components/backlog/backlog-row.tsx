@@ -1,4 +1,4 @@
-﻿import { ExternalLink, Pencil, Trash2 } from "lucide-react";
+import { ExternalLink, Pencil, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { parseLocalCardId, type Card } from "../../state";
 import { Badge } from "../ui/badge";
@@ -10,13 +10,15 @@ export interface BacklogRowProps {
   card: Card;
   localActions?: BacklogLocalActions;
   onEdit: () => void;
+  onSelect?: () => void;
 }
 
-export function BacklogRowContent({ card, localActions, onEdit }: BacklogRowProps) {
+export function BacklogRowContent({ card, localActions, onEdit, onSelect }: BacklogRowProps) {
   const localId = parseLocalCardId(card.id);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
 
-  function handleDeleteClick() {
+  function handleDeleteClick(e: React.MouseEvent) {
+    e.stopPropagation();
     if (!localId || !localActions?.onDeleteLocal) return;
     if (!confirmingDelete) {
       setConfirmingDelete(true);
@@ -28,10 +30,13 @@ export function BacklogRowContent({ card, localActions, onEdit }: BacklogRowProp
 
   return (
     <>
-      <div className="min-w-0 flex-1">
+      <div
+        className="min-w-0 flex-1 cursor-pointer"
+        onClick={onSelect}
+      >
         <p
           data-testid="backlog-title"
-          className="truncate text-sm font-medium leading-snug"
+          className="truncate text-sm font-medium leading-snug transition-colors hover:text-primary"
           title={card.title}
         >
           {card.title}
@@ -52,7 +57,7 @@ export function BacklogRowContent({ card, localActions, onEdit }: BacklogRowProp
         </div>
       </div>
 
-      <div className="flex shrink-0 items-center gap-1">
+      <div className="flex shrink-0 items-center gap-1" onClick={(e) => e.stopPropagation()}>
         {card.htmlUrl != null && (
           <a
             href={card.htmlUrl}

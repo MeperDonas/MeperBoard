@@ -44,6 +44,7 @@ import {
   parseLocalCardId,
   sortCards,
   useBacklog,
+  useMoveCard,
   type BacklogFilters,
   type BacklogSort,
   type Card,
@@ -51,6 +52,7 @@ import {
   type SortField,
 } from "../../state";
 import { Badge } from "../ui/badge";
+import { CardPreviewDrawer } from "../preview-drawer/card-preview-drawer";
 import { BacklogEditForm, type BacklogLocalCardPatch } from "./backlog-edit-form";
 import { BacklogPaginator } from "./backlog-paginator";
 import { BacklogRowContent } from "./backlog-row";
@@ -90,6 +92,7 @@ export function Backlog({ localActions }: BacklogProps = {}) {
   const { data, isPending, isError } = useBacklog();
   const router = useGuardedRouter();
   const reduceMotion = useReducedMotion() ?? false;
+  const moveCard = useMoveCard();
 
   const [typeFilter, setTypeFilter] = useState<TypeFilter>("all");
   const [labelFilter, setLabelFilter] = useState<string>(ALL_LABELS);
@@ -101,6 +104,7 @@ export function Backlog({ localActions }: BacklogProps = {}) {
   const [pageSize, setPageSize] = useState<PageSizeOption>(DEFAULT_PAGE_SIZE);
   const [page, setPage] = useState(1);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [selectedCard, setSelectedCard] = useState<Card | null>(null);
   const [focusIndex, setFocusIndex] = useState(0);
   const rowRefs = useRef(new Map<number, HTMLElement>());
 
@@ -206,21 +210,10 @@ export function Backlog({ localActions }: BacklogProps = {}) {
     }
   }
 
-  function canOpenDetail(card: Card): boolean {
-    return (
-      card.source === "github" &&
-      card.number != null &&
-      card.repo === `${DEFAULT_REPO.owner}/${DEFAULT_REPO.name}`
-    );
-  }
-
   function handleRowKeyDown(event: KeyboardEvent<HTMLElement>, card: Card) {
     if (event.key !== "Enter" || event.target !== event.currentTarget) return;
-    if (!canOpenDetail(card)) return;
     event.preventDefault();
-    const href = `/issues/${card.number}`;
-    if (router) router.push(href);
-    else window.location.assign(href);
+    setSelectedCard(card);
   }
 
   function saveLocalEdit(card: Card, patch: BacklogLocalCardPatch) {
@@ -240,6 +233,7 @@ export function Backlog({ localActions }: BacklogProps = {}) {
     onStartEdit: (card: Card) => setEditingId(parseLocalCardId(card.id)),
     onCancelEdit: () => setEditingId(null),
     onSaveEdit: saveLocalEdit,
+    onSelectCard: (card: Card) => setSelectedCard(card),
     localActions,
   };
 
@@ -293,6 +287,20 @@ export function Backlog({ localActions }: BacklogProps = {}) {
           )}
         </>
       )}
+
+      <CardPreviewDrawer
+        card={selectedCard}
+        onClose={() => setSelectedCard(null)}
+        onMoveColumn={(cardId, toColumnId) => {
+          moveCard.mutate({
+            cardId,
+            toColumnId,
+          });
+          if (selectedCard) {
+            setSelectedCard({ ...selectedCard, columnId: toColumnId });
+          }
+        }}
+      />
     </div>
   );
 }
@@ -307,6 +315,7 @@ interface EntryListProps {
   onStartEdit: (card: Card) => void;
   onCancelEdit: () => void;
   onSaveEdit: (card: Card, patch: BacklogLocalCardPatch) => void;
+  onSelectCard: (card: Card) => void;
   localActions?: BacklogLocalActions;
 }
 
@@ -323,6 +332,7 @@ function PlainEntryList({
   onStartEdit,
   onCancelEdit,
   onSaveEdit,
+  onSelectCard,
   localActions,
 }: EntryListProps) {
   let rowIndex = -1;
@@ -365,6 +375,7 @@ function PlainEntryList({
                 card={entry.card}
                 localActions={localActions}
                 onEdit={() => onStartEdit(entry.card)}
+                onSelect={() => onSelectCard(entry.card)}
               />
             )}
           </li>
@@ -384,6 +395,7 @@ function VirtualEntryList({
   onStartEdit,
   onCancelEdit,
   onSaveEdit,
+  onSelectCard,
   localActions,
 }: EntryListProps) {
   const virtualizer = useWindowVirtualizer({
@@ -454,6 +466,7 @@ function VirtualEntryList({
                 card={entry.card}
                 localActions={localActions}
                 onEdit={() => onStartEdit(entry.card)}
+                onSelect={() => onSelectCard(entry.card)}
               />
             )}
           </div>

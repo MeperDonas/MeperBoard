@@ -34,6 +34,8 @@ export type { BoardMove } from "./move";
 export interface BoardProps {
   /** Invoked when a card moves between columns, for consumers to persist. */
   onMoveCard?: (move: BoardMove) => void;
+  /** Invoked when a card is clicked for inspection / preview. */
+  onSelectCard?: (card: Card) => void;
 }
 
 /** How long the landing accent-ring pulse fades out (~300ms per round 3 spec). */
@@ -58,7 +60,7 @@ const FLIGHT_DIP_KEYFRAMES = [0.96, 1];
  * The board remains read-only: it renders cards and reports moves via
  * `onMoveCard`; it never writes to GitHub or the local store itself.
  */
-export function Board({ onMoveCard }: BoardProps) {
+export function Board({ onMoveCard, onSelectCard }: BoardProps) {
   const { data, isPending, isError } = useBoard();
   const reduceMotion = useReducedMotion() ?? false;
   const sensors = useSensors(
@@ -69,34 +71,8 @@ export function Board({ onMoveCard }: BoardProps) {
   const [toast, setToast] = useState<MoveToastState | null>(null);
   const [pulse, setPulse] = useState<{ columnId: string; key: number } | null>(null);
   const [flight, setFlight] = useState<{ cardId: string; key: number } | null>(null);
-  const dismissToast = useCallback(() => setToast(null), []);
 
-  useEffect(() => {
-    if (!pulse && !flight) return;
-    const timer = setTimeout(
-      () => {
-        setPulse(null);
-        setFlight(null);
-      },
-      Math.max(LANDING_PULSE_MS, FLIGHT_DIP_MS) + 50,
-    );
-    return () => clearTimeout(timer);
-  }, [pulse, flight]);
-
-  if (isPending) {
-    return <BoardSkeleton />;
-  }
-  if (isError || !data) {
-    return (
-      <BoardStatus>
-        <AlertCircle className="h-5 w-5 text-destructive" aria-hidden="true" />
-        <p className="text-sm font-medium text-foreground">Failed to load the board.</p>
-        <p className="text-xs text-muted-foreground">Check your connection and try again.</p>
-      </BoardStatus>
-    );
-  }
-
-  const effective = applyMoves(data, moves);
+  const effective = applyMoves(data ?? { columns: [] }, moves);
   const totalCards = effective.columns.reduce((sum, column) => sum + column.cards.length, 0);
   const activeCard = activeId ? findCard(effective, activeId) : null;
 
@@ -131,6 +107,19 @@ export function Board({ onMoveCard }: BoardProps) {
     handleMove(String(active.id), String(over.id));
   }
 
+  if (isPending) {
+    return <BoardSkeleton />;
+  }
+  if (isError || !data) {
+    return (
+      <BoardStatus>
+        <AlertCircle className="h-5 w-5 text-destructive" aria-hidden="true" />
+        <p className="text-sm font-medium text-foreground">Failed to load the board.</p>
+        <p className="text-xs text-muted-foreground">Check your connection and try again.</p>
+      </BoardStatus>
+    );
+  }
+
   return (
     <DndContext
       sensors={sensors}
@@ -150,6 +139,7 @@ export function Board({ onMoveCard }: BoardProps) {
                 flight={flight}
                 isDraggingActive={Boolean(activeId)}
                 reduceMotion={reduceMotion}
+                onSelectCard={onSelectCard}
               />
             ))}
           </div>
@@ -158,7 +148,7 @@ export function Board({ onMoveCard }: BoardProps) {
           </DragOverlay>
         </LayoutGroup>
       </div>
-      <MoveToast toast={toast} onUndo={handleUndo} onDismiss={dismissToast} />
+      <MoveToast toast={toast} onUndo={handleUndo} onDismiss={() => setToast(null)} />
     </DndContext>
   );
 }
@@ -169,12 +159,14 @@ function BoardColumn({
   flight,
   isDraggingActive,
   reduceMotion,
+  onSelectCard,
 }: {
   column: BoardColumnType;
   pulse: { columnId: string; key: number } | null;
   flight: { cardId: string; key: number } | null;
   isDraggingActive: boolean;
   reduceMotion: boolean;
+  onSelectCard?: (card: Card) => void;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: column.id });
 
@@ -240,6 +232,7 @@ function BoardColumn({
               card={card}
               dipping={flight?.cardId === card.id}
               reduceMotion={reduceMotion}
+              onSelect={() => onSelectCard?.(card)}
             />
           ))
         )}
@@ -263,10 +256,12 @@ function BoardCard({
   card,
   dipping,
   reduceMotion,
+  onSelect,
 }: {
   card: Card;
   dipping: boolean;
   reduceMotion: boolean;
+  onSelect?: () => void;
 }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: card.id,
@@ -300,7 +295,14 @@ function BoardCard({
             <GripVertical className="h-4 w-4" />
           </span>
 
-          <div className="min-w-0 flex-1">
+          <div
+            className="min-w-0 flex-1 cursor-pointer"
+            onClick={(e) => {
+              if (!isDragging) {
+                onSelect?.();
+              }
+            }}
+          >
             <p
               className="text-sm font-medium leading-snug tracking-tight text-foreground transition-colors duration-150 group-hover:text-primary"
               title={card.title}

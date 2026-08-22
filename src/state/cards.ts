@@ -52,6 +52,12 @@ function isGithubItem(item: GithubItem | LocalItem): item is GithubItem {
 }
 
 function githubToCard(item: GithubItem, overrideColumn?: string): Card {
+  const resolved = resolveGithubColumn(item);
+  const columnId =
+    item.state === "closed" && overrideColumn !== "done"
+      ? "done"
+      : (overrideColumn ?? resolved);
+
   return {
     id: githubCardId(item.repo, item.number),
     source: "github",
@@ -59,7 +65,7 @@ function githubToCard(item: GithubItem, overrideColumn?: string): Card {
     title: item.title,
     body: item.body,
     labels: item.labels,
-    columnId: overrideColumn ?? resolveGithubColumn(item),
+    columnId,
     repo: item.repo,
     number: item.number,
     state: item.state,
