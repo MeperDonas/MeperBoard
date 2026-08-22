@@ -80,7 +80,7 @@ export function ConnectModal({ onClose }: ConnectModalProps) {
         <p className="mt-4 text-center text-[11px] leading-relaxed text-muted-foreground">
           Self-hosting?{" "}
           <a
-            href="/docs/SELF_HOST.md"
+            href="/self-host"
             className="inline-flex items-center gap-1 font-medium text-foreground underline decoration-border underline-offset-2 transition-colors hover:text-primary"
           >
             Read the self-host setup
