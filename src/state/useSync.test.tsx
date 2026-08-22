@@ -1,8 +1,9 @@
 import { act, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { githubItemRepo } from "../data/repositories";
+import { githubItemRepo, repoRepo } from "../data/repositories";
 import { createTestQueryClient, queryWrapper, resetDb } from "./test-utils";
+import { useActiveRepo } from "./use-repos";
 import { useBoard } from "./useBoard";
 import { useSync } from "./useSync";
 
@@ -92,5 +93,68 @@ describe("useSync", () => {
     await waitFor(() => expect(screen.getByTestId("status")).toHaveTextContent("error"));
 
     expect(await githubItemRepo.getAll()).toHaveLength(0);
+  });
+
+  it("syncs the persisted active repo when no owner/name is passed", async () => {
+    await repoRepo.setActive("acme", "widgets");
+
+    const fetcher = vi.fn<(url: string) => Promise<Response>>();
+    fetcher.mockResolvedValue(jsonResponse(issuePayloads));
+    const client = createTestQueryClient();
+
+    function RepoProbe() {
+      const sync = useSync({ fetcher });
+      return (
+        <button data-testid="sync" onClick={() => sync.mutate()}>
+          sync
+        </button>
+      );
+    }
+
+    render(<RepoProbe />, { wrapper: queryWrapper(client) });
+
+    await waitFor(() => expect(githubItemRepo.getAll()).resolves.toHaveLength(0));
+
+    act(() => screen.getByTestId("sync").click());
+
+    await waitFor(() => expect(githubItemRepo.getAll()).resolves.toHaveLength(2));
+
+    const stored = await githubItemRepo.getAll();
+    expect(stored.every((item) => item.repo === "acme/widgets")).toBe(true);
+    expect(fetcher).toHaveBeenCalledWith(
+      "https://api.github.com/repos/acme/widgets/issues?state=all&per_page=100",
+    );
+  });
+});
+
+function ActiveRepoProbe() {
+  const active = useActiveRepo();
+  return (
+    <div>
+      <span data-testid="active-repo">{active.data ? `${active.data.owner}/${active.data.name}` : "none"}</span>
+    </div>
+  );
+}
+
+describe("useActiveRepo", () => {
+  beforeEach(resetDb);
+
+  it("returns the persisted active repo after repoRepo.setActive", async () => {
+    await repoRepo.setActive("meperdonas", "meperboard");
+    const client = createTestQueryClient();
+
+    render(<ActiveRepoProbe />, { wrapper: queryWrapper(client) });
+
+    await waitFor(() =>
+      expect(screen.getByTestId("active-repo")).toHaveTextContent("meperdonas/meperboard"),
+    );
+  });
+
+  it("returns none when no active repo is persisted", async () => {
+    const client = createTestQueryClient();
+
+    render(<ActiveRepoProbe />, { wrapper: queryWrapper(client) });
+
+    await waitFor(() => expect(screen.getByTestId("active-repo")).toHaveTextContent("none"));
   });
 });

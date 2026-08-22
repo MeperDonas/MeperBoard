@@ -4,4 +4,5 @@ export const queryKeys = {
   backlog: ["backlog"] as const,
   issueDetail: ["issue-detail"] as const,
   localCards: ["local-cards"] as const,
+  userRepos: ["user", "repos"] as const,
 };
