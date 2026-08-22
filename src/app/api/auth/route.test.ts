@@ -270,7 +270,7 @@ describe("/api/auth/logout", () => {
 
   it("clears the __session cookie and returns ok", async () => {
     stubAuthEnv();
-    vi.stubGlobal("fetch", vi.fn(() => Promise.resolve(new Response(null, { status: 204 }))));
+    stubFetch(() => new Response(null, { status: 204 }));
 
     const jwe = await buildSessionJwe(
       createSession({ token: "ghu_1", refresh_token: "ghr_1", login: "meperdonas", avatar_url: "u" }),
@@ -285,6 +285,50 @@ describe("/api/auth/logout", () => {
     const cookies = setCookies(res);
     const cleared = cookies.find((c) => c.startsWith("__session=") && c.includes("Max-Age=0"));
     expect(cleared).toBeTruthy();
+  });
+
+  it("attempts best-effort revocation against the token/delete endpoint with the user access token", async () => {
+    stubAuthEnv();
+    const fetchMock = stubFetch(() => new Response(null, { status: 204 }));
+
+    const jwe = await buildSessionJwe(
+      createSession({ token: "ghu_1", refresh_token: "ghr_1", login: "meperdonas", avatar_url: "u" }),
+      SECRET,
+    );
+    const res = await logout.POST(
+      authRequest("http://localhost:3000/api/auth/logout", { cookie: `__session=${jwe}` }),
+    );
+
+    expect(res.status).toBe(200);
+    expect((await res.json()).ok).toBe(true);
+
+    const revokeCall = fetchMock.mock.calls.find(([url]) => url.includes("/token/delete")) as
+      | [string, RequestInit]
+      | undefined;
+    expect(revokeCall).toBeTruthy();
+    expect(revokeCall![1].method).toBe("POST");
+    const body = JSON.parse(revokeCall![1].body as string);
+    expect(body).toEqual({ client_id: CLIENT_ID, access_token: "ghu_1" });
+
+    // The cookie is always cleared even when revocation ran.
+    expect(setCookies(res).some((c) => c.startsWith("__session=") && c.includes("Max-Age=0"))).toBe(true);
+  });
+
+  it("still clears the cookie and returns ok when revocation fails", async () => {
+    stubAuthEnv();
+    stubFetch(() => Promise.reject(new Error("network down")));
+
+    const jwe = await buildSessionJwe(
+      createSession({ token: "ghu_1", refresh_token: "ghr_1", login: "meperdonas", avatar_url: "u" }),
+      SECRET,
+    );
+    const res = await logout.POST(
+      authRequest("http://localhost:3000/api/auth/logout", { cookie: `__session=${jwe}` }),
+    );
+
+    expect(res.status).toBe(200);
+    expect((await res.json()).ok).toBe(true);
+    expect(setCookies(res).some((c) => c.startsWith("__session=") && c.includes("Max-Age=0"))).toBe(true);
   });
 
   it("still returns ok and clears the cookie when there is no session", async () => {

@@ -31,17 +31,22 @@ async function bestEffortRevoke(token: string): Promise<void> {
   const clientSecret = process.env.GITHUB_CLIENT_SECRET;
   if (!clientId || !clientSecret) return;
   try {
-    // Best-effort revocation via the OAuth-app token-revoke endpoint. An
-    // authenticated GitHub App revoke needs the app private key + installation
-    // id, which we don't persist; any failure here is intentionally ignored.
-    await fetch(`https://api.github.com/applications/${clientId}/token`, {
-      method: "DELETE",
+    // Best-effort revocation of the user access token via the OAuth-app
+    // token/delete endpoint. For a GitHub App this endpoint expects the app
+    // private-key JWT plus the installation id, neither of which the stateless
+    // JWE persists (by design), so this call is intentionally best-effort and
+    // any failure is swallowed. To make server-side revocation functional, set
+    // `GITHUB_APP_PRIVATE_KEY` and persist the user's `installation_id`, then
+    // call App-authenticated `POST /app/installations/{installation_id}/token`
+    // (delete). The local logout below always succeeds regardless.
+    await fetch(`https://api.github.com/applications/${clientId}/token/delete`, {
+      method: "POST",
       headers: {
         Authorization: `Basic ${btoa(`${clientId}:${clientSecret}`)}`,
         Accept: "application/vnd.github+json",
         "User-Agent": "meperboard",
       },
-      body: JSON.stringify({ access_token: token }),
+      body: JSON.stringify({ client_id: clientId, access_token: token }),
     });
   } catch {
     // best-effort — never block logout
