@@ -30,24 +30,23 @@ import { Board } from "../board";
 import { LocalCards } from "../local-cards";
 
 import { CardPreviewDrawer } from "../preview-drawer/card-preview-drawer";
+import { ProjectDashboard } from "../dashboard";
 import { SyncControl } from "./sync-control";
 
 /** Desktop width of the Local Cards rail (matches the round-1 grid column). */
 const RAIL_WIDTH = 340;
 
 /**
- * The board page composition: app header, a read-only sync control, the kanban
- * board (with move persistence wired), and the local-card rail. This is where
- * the board's `onMoveCard` report becomes a store write — local cards update
- * their column in place; GitHub items write a `column_overrides` row.
- *
- * UX overhaul: constrained viewport height (no global scroll), secondary sync
- * button with icon state feedback, accessible rail toggle with Button primitive,
- * unified Badge chips for issue/PR counts, and instant CardPreviewDrawer.
+ * The board page composition: app header, project health dashboard, a read-only sync
+ * control, the kanban board (with move persistence wired), and the local-card slide-over.
  */
 export function BoardWorkspace() {
   const [collapsed, setCollapsed] = useState<boolean>(() => loadLocalCardsCollapsed());
   const [selectedCard, setSelectedCard] = useState<Card | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filterType, setFilterType] = useState<"all" | "issue" | "pull" | "local" | "critical">("all");
+
+  const { data: allCards = [] } = useBacklog();
   const moveCard = useMoveCard();
   const resetCard = useResetCardMove();
 
@@ -73,14 +72,29 @@ export function BoardWorkspace() {
     <div className="flex h-screen flex-col overflow-hidden">
       <AppHeader />
 
-      <div className="flex flex-wrap items-center gap-3 border-b px-4 py-2.5 md:px-6">
+      {/* KPI Project Health Dashboard & Control Toolbar */}
+      <ProjectDashboard
+        cards={allCards}
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+        filterType={filterType}
+        onFilterTypeChange={setFilterType}
+      />
+
+      <div className="flex flex-wrap items-center gap-3 border-b px-4 py-2 md:px-6">
         <SyncControl />
         <TotalCount />
         <RailToggle collapsed={collapsed} onToggle={toggle} />
       </div>
 
       <div className="flex-1 min-h-0 overflow-hidden">
-        <RailLayout collapsed={collapsed} onToggle={toggle} onSelectCard={setSelectedCard} />
+        <RailLayout
+          collapsed={collapsed}
+          onToggle={toggle}
+          onSelectCard={setSelectedCard}
+          searchQuery={searchQuery}
+          filterType={filterType}
+        />
       </div>
 
       <CardPreviewDrawer
@@ -156,10 +170,14 @@ function RailLayout({
   collapsed,
   onToggle,
   onSelectCard,
+  searchQuery = "",
+  filterType = "all",
 }: {
   collapsed: boolean;
   onToggle: () => void;
   onSelectCard: (card: Card) => void;
+  searchQuery?: string;
+  filterType?: "all" | "issue" | "pull" | "local" | "critical";
 }) {
   const reduceMotion = useReducedMotion() ?? false;
   const moveCard = useMoveCard();
@@ -170,6 +188,8 @@ function RailLayout({
         <Board
           onMoveCard={(move) => moveCard.mutate(move)}
           onSelectCard={onSelectCard}
+          searchQuery={searchQuery}
+          filterType={filterType}
         />
       </div>
 

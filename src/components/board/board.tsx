@@ -18,7 +18,7 @@ import {
   GripVertical,
   Inbox,
 } from "lucide-react";
-import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 
 import { cn } from "../../lib/utils";
 import { MAX_WIP_PER_COLUMN } from "../../lib/config";
@@ -27,6 +27,7 @@ import { useBoard, type Board, type BoardColumn as BoardColumnType, type Card } 
 import { Badge } from "../ui/badge";
 import { CardMetaRow } from "../ui/card-meta";
 import { MoveToast, type MoveToastState } from "./move-toast";
+import { isCriticalCard } from "../../domain/metrics";
 import { applyMoves, resolveMove, type BoardMove } from "./move";
 
 export type { BoardMove } from "./move";
@@ -36,6 +37,10 @@ export interface BoardProps {
   onMoveCard?: (move: BoardMove) => void;
   /** Invoked when a card is clicked for inspection / preview. */
   onSelectCard?: (card: Card) => void;
+  /** In-memory query filter. */
+  searchQuery?: string;
+  /** Card type or critical filter. */
+  filterType?: "all" | "issue" | "pull" | "local" | "critical";
 }
 
 /** How long the landing accent-ring pulse fades out (~300ms per round 3 spec). */
@@ -44,23 +49,39 @@ const LANDING_PULSE_MS = 300;
 const FLIGHT_DIP_MS = 300;
 const FLIGHT_DIP_KEYFRAMES = [0.96, 1];
 
+function filterCard(
+  card: Card,
+  query: string,
+  filterType: "all" | "issue" | "pull" | "local" | "critical",
+): boolean {
+  if (query) {
+    const q = query.toLowerCase();
+    const titleMatch = card.title.toLowerCase().includes(q);
+    const bodyMatch = card.body.toLowerCase().includes(q);
+    const labelMatch = card.labels.some((l) => l.toLowerCase().includes(q));
+    const numberMatch = card.number != null && String(card.number).includes(q);
+    if (!titleMatch && !bodyMatch && !labelMatch && !numberMatch) return false;
+  }
+
+  if (filterType === "issue") return card.type === "issue";
+  if (filterType === "pull") return card.type === "pull";
+  if (filterType === "local") return card.type === "local";
+  if (filterType === "critical") return isCriticalCard(card);
+
+  return true;
+}
+
 /**
  * Kanban board: ordered columns over the unified card projection. Supports
  * pointer drag (dnd-kit) and a keyboard/single-pointer alternative (move
  * left/right controls), so a drag gesture is never required (WCAG 2.2 AA).
- *
- * UX overhaul:
- * - Full viewport height constraint with isolated per-column scrolling.
- * - Progressive disclosure: drag handle and move arrows are hidden at rest,
- *   smoothly revealed on card hover or focus-within to eliminate visual clutter.
- * - Accurate ghost card sizing (w-72 matching column width).
- * - Per-column empty states and accessible WIP warning indicators.
- * - Motion tuned with centralized spring dynamics.
- *
- * The board remains read-only: it renders cards and reports moves via
- * `onMoveCard`; it never writes to GitHub or the local store itself.
  */
-export function Board({ onMoveCard, onSelectCard }: BoardProps) {
+export function Board({
+  onMoveCard,
+  onSelectCard,
+  searchQuery = "",
+  filterType = "all",
+}: BoardProps) {
   const { data, isPending, isError } = useBoard();
   const reduceMotion = useReducedMotion() ?? false;
   const sensors = useSensors(
@@ -73,7 +94,23 @@ export function Board({ onMoveCard, onSelectCard }: BoardProps) {
   const [flight, setFlight] = useState<{ cardId: string; key: number } | null>(null);
 
   const effective = applyMoves(data ?? { columns: [] }, moves);
-  const totalCards = effective.columns.reduce((sum, column) => sum + column.cards.length, 0);
+
+  const filteredBoard: Board = useMemo(() => {
+    return {
+      ...effective,
+      columns: effective.columns.map((column: BoardColumnType) => ({
+        ...column,
+        cards: column.cards.filter((card: Card) =>
+          filterCard(card, searchQuery, filterType),
+        ),
+      })),
+    };
+  }, [effective, searchQuery, filterType]);
+
+  const totalCards = filteredBoard.columns.reduce(
+    (sum: number, column: BoardColumnType) => sum + column.cards.length,
+    0,
+  );
   const activeCard = activeId ? findCard(effective, activeId) : null;
 
   function handleMove(cardId: string, toColumnId: string) {
@@ -131,7 +168,7 @@ export function Board({ onMoveCard, onSelectCard }: BoardProps) {
         {totalCards === 0 ? <EmptyState /> : null}
         <LayoutGroup>
           <div className="flex flex-1 min-h-0 gap-3 overflow-x-auto pb-2 no-scrollbar">
-            {effective.columns.map((column) => (
+            {filteredBoard.columns.map((column: BoardColumnType) => (
               <BoardColumn
                 key={column.id}
                 column={column}

@@ -1,0 +1,305 @@
+"use client";
+
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import {
+  Activity,
+  AlertTriangle,
+  AlignLeft,
+  CheckCircle2,
+  Clock,
+  LayoutGrid,
+  Plus,
+  Search,
+  SlidersHorizontal,
+  Sparkles,
+  X,
+} from "lucide-react";
+import { useEffect, useState } from "react";
+
+import { computeProjectMetrics, type ProjectMetrics } from "../../domain/metrics";
+import { cn } from "../../lib/utils";
+import type { Card } from "../../state/cards";
+import { Badge } from "../ui/badge";
+import { Button } from "../ui/button";
+import { OPEN_CREATE_LOCAL_CARD_EVENT } from "../local-cards";
+
+export interface ProjectDashboardProps {
+  cards: Card[];
+  searchQuery: string;
+  onSearchChange: (query: string) => void;
+  filterType: "all" | "issue" | "pull" | "local" | "critical";
+  onFilterTypeChange: (filter: "all" | "issue" | "pull" | "local" | "critical") => void;
+  onOpenCreate?: () => void;
+  className?: string;
+}
+
+/**
+ * Sprint & Project Health Dashboard with KPI metrics, progress track,
+ * real-time search, filter controls, view switcher, and quick creation CTA.
+ */
+export function ProjectDashboard({
+  cards,
+  searchQuery,
+  onSearchChange,
+  filterType,
+  onFilterTypeChange,
+  onOpenCreate,
+  className,
+}: ProjectDashboardProps) {
+  const pathname = usePathname();
+  const [showFilterMenu, setShowFilterMenu] = useState(false);
+  const metrics: ProjectMetrics = computeProjectMetrics(cards);
+
+  function handleCreateClick() {
+    if (onOpenCreate) {
+      onOpenCreate();
+    } else {
+      window.dispatchEvent(new CustomEvent(OPEN_CREATE_LOCAL_CARD_EVENT));
+    }
+  }
+
+  return (
+    <header
+      className={cn(
+        "flex flex-col gap-3.5 border-b border-border/70 bg-card/25 px-4 py-3.5 backdrop-blur-md md:px-6",
+        className,
+      )}
+      role="region"
+      aria-label="Project health dashboard"
+    >
+      {/* Row 1: KPI Summary Cards */}
+      <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4 sm:gap-3">
+        {/* Card 1: Completed */}
+        <div
+          className="flex items-center gap-3 rounded-xl border border-border/60 bg-card/60 p-3 shadow-xs transition-colors hover:border-emerald-500/40"
+          data-testid="kpi-completed"
+        >
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-500 ring-1 ring-emerald-500/20">
+            <CheckCircle2 className="h-4 w-4" />
+          </div>
+          <div className="min-w-0">
+            <div className="flex items-baseline gap-1 font-mono text-base font-bold text-foreground">
+              <span>{metrics.completed}</span>
+              <span className="text-xs font-medium text-muted-foreground">/{metrics.total}</span>
+            </div>
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+              Completed
+            </p>
+          </div>
+        </div>
+
+        {/* Card 2: In Progress */}
+        <div
+          className="flex items-center gap-3 rounded-xl border border-border/60 bg-card/60 p-3 shadow-xs transition-colors hover:border-amber-500/40"
+          data-testid="kpi-in-progress"
+        >
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-500/10 text-amber-500 ring-1 ring-amber-500/20">
+            <Clock className="h-4 w-4" />
+          </div>
+          <div className="min-w-0">
+            <div className="font-mono text-base font-bold text-foreground">
+              {metrics.inProgress}
+            </div>
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+              In Progress
+            </p>
+          </div>
+        </div>
+
+        {/* Card 3: Critical */}
+        <div
+          className={cn(
+            "flex items-center gap-3 rounded-xl border border-border/60 bg-card/60 p-3 shadow-xs transition-colors hover:border-red-500/40",
+            metrics.critical > 0 && "border-red-500/30 bg-red-500/[0.04]",
+          )}
+          data-testid="kpi-critical"
+        >
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-red-500/10 text-red-500 ring-1 ring-red-500/20">
+            <AlertTriangle className="h-4 w-4" />
+          </div>
+          <div className="min-w-0">
+            <div className="font-mono text-base font-bold text-foreground">
+              {metrics.critical}
+            </div>
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+              Critical
+            </p>
+          </div>
+        </div>
+
+        {/* Card 4: Velocity / Scope */}
+        <div
+          className="flex items-center gap-3 rounded-xl border border-border/60 bg-card/60 p-3 shadow-xs transition-colors hover:border-primary/40"
+          data-testid="kpi-velocity"
+        >
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary ring-1 ring-primary/20">
+            <Activity className="h-4 w-4" />
+          </div>
+          <div className="min-w-0">
+            <div className="flex items-baseline gap-1 font-mono text-base font-bold text-foreground">
+              <span>{metrics.velocityScore}</span>
+              <span className="text-xs font-medium text-muted-foreground">/{metrics.totalScore} pts</span>
+            </div>
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+              Velocity
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Row 2: Completion Progress Track */}
+      <div className="flex items-center gap-3">
+        <div
+          className="relative h-2 flex-1 overflow-hidden rounded-full bg-muted/60"
+          role="progressbar"
+          aria-valuenow={metrics.completionPercentage}
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-label="Sprint completion progress"
+        >
+          <div
+            className="h-full rounded-full bg-gradient-to-r from-primary via-primary-hover to-emerald-400 transition-all duration-500 ease-out shadow-xs shadow-primary/30"
+            style={{ width: `${Math.min(100, Math.max(0, metrics.completionPercentage))}%` }}
+          />
+        </div>
+        <span className="shrink-0 font-mono text-xs font-bold text-primary">
+          {metrics.completionPercentage}%
+        </span>
+      </div>
+
+      {/* Row 3: Control & Action Toolbar */}
+      <div className="flex flex-wrap items-center justify-between gap-2.5">
+        {/* Search input */}
+        <div className="relative min-w-[200px] max-w-md flex-1">
+          <Search
+            className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+            aria-hidden="true"
+          />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => onSearchChange(e.target.value)}
+            placeholder="Search issues and cards..."
+            aria-label="Search issues and cards"
+            className="w-full rounded-xl border border-border/80 bg-background/80 py-1.5 pl-9 pr-8 text-xs font-medium text-foreground placeholder:text-muted-foreground/60 shadow-2xs outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary/20"
+          />
+          {searchQuery && (
+            <button
+              type="button"
+              onClick={() => onSearchChange("")}
+              aria-label="Clear search"
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          )}
+        </div>
+
+        {/* Toolbar Right Controls */}
+        <div className="flex items-center gap-2">
+          {/* Filters dropdown button */}
+          <div className="relative">
+            <Button
+              type="button"
+              variant={filterType !== "all" ? "primary" : "secondary"}
+              size="sm"
+              onClick={() => setShowFilterMenu((prev) => !prev)}
+              aria-label="Filter cards"
+              className="h-8 gap-1.5 rounded-xl px-2.5 text-xs shadow-2xs"
+            >
+              <SlidersHorizontal className="h-3.5 w-3.5" />
+              <span>Filters</span>
+              {filterType !== "all" && (
+                <span className="rounded bg-primary-foreground/20 px-1 font-mono text-[10px] text-primary-foreground">
+                  {filterType}
+                </span>
+              )}
+            </Button>
+
+            {/* Filter Menu Popup */}
+            {showFilterMenu && (
+              <div className="absolute right-0 top-full z-30 mt-1.5 w-44 rounded-xl border border-border/80 bg-popover/95 p-1 shadow-xl backdrop-blur-xl">
+                {(
+                  [
+                    { id: "all", label: "All Items" },
+                    { id: "issue", label: "Issues Only" },
+                    { id: "pull", label: "PRs Only" },
+                    { id: "local", label: "Local Cards" },
+                    { id: "critical", label: "Critical / Bugs" },
+                  ] as const
+                ).map((f) => (
+                  <button
+                    key={f.id}
+                    type="button"
+                    onClick={() => {
+                      onFilterTypeChange(f.id);
+                      setShowFilterMenu(false);
+                    }}
+                    className={cn(
+                      "flex w-full items-center justify-between rounded-lg px-2.5 py-1.5 text-xs transition-colors",
+                      filterType === f.id
+                        ? "bg-primary text-primary-foreground font-semibold"
+                        : "text-foreground hover:bg-accent",
+                    )}
+                  >
+                    <span>{f.label}</span>
+                    {filterType === f.id && <CheckCircle2 className="h-3 w-3" />}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* View Switcher: Board vs Backlog */}
+          <div
+            className="flex items-center rounded-xl border border-border/70 bg-card/60 p-0.5 shadow-2xs"
+            role="group"
+            aria-label="View switcher"
+          >
+            <Link
+              href="/"
+              title="Board view"
+              aria-label="Board view"
+              className={cn(
+                "flex h-7 w-7 items-center justify-center rounded-lg transition-colors",
+                pathname === "/"
+                  ? "bg-primary text-primary-foreground shadow-2xs font-semibold"
+                  : "text-muted-foreground hover:text-foreground hover:bg-accent",
+              )}
+            >
+              <LayoutGrid className="h-3.5 w-3.5" />
+            </Link>
+
+            <Link
+              href="/backlog"
+              title="Backlog list view"
+              aria-label="Backlog list view"
+              className={cn(
+                "flex h-7 w-7 items-center justify-center rounded-lg transition-colors",
+                pathname === "/backlog"
+                  ? "bg-primary text-primary-foreground shadow-2xs font-semibold"
+                  : "text-muted-foreground hover:text-foreground hover:bg-accent",
+              )}
+            >
+              <AlignLeft className="h-3.5 w-3.5" />
+            </Link>
+          </div>
+
+          {/* CTA: + New Issue / New Card */}
+          <Button
+            type="button"
+            variant="primary"
+            size="sm"
+            onClick={handleCreateClick}
+            aria-label="New card or issue"
+            className="h-8 gap-1.5 rounded-xl px-3 text-xs font-semibold shadow-xs shadow-primary/20"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            <span>New Issue</span>
+          </Button>
+        </div>
+      </div>
+    </header>
+  );
+}
