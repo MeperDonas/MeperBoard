@@ -135,4 +135,32 @@ describe("LocalCards", () => {
     await waitFor(() => expect(screen.queryByText("Buy milk")).not.toBeInTheDocument());
     expect(await localItemRepo.getAll()).toHaveLength(0);
   });
+
+  it("opens the impressive create modal via the header trigger button and creates a card", async () => {
+    renderLocalCards();
+    await waitForForm();
+
+    fireEvent.click(screen.getByRole("button", { name: /modal window/i }));
+
+    expect(await screen.findByRole("dialog", { name: /create new local card/i })).toBeInTheDocument();
+
+    const titleInputs = screen.getAllByLabelText("New card title");
+    // The modal's input is the second one
+    const modalTitleInput = titleInputs[titleInputs.length - 1];
+    fireEvent.change(modalTitleInput, { target: { value: "Awesome Task from Modal" } });
+
+    // Pick Doing status in the modal
+    fireEvent.click(screen.getByRole("button", { name: "Doing" }));
+
+    // Click Create Card in the modal
+    fireEvent.click(screen.getByRole("button", { name: /create card/i }));
+
+    await waitFor(() => expect(screen.getByText("Awesome Task from Modal")).toBeInTheDocument());
+
+    const stored = await localItemRepo.getAll();
+    expect(stored.find((item) => item.title === "Awesome Task from Modal")).toMatchObject({
+      title: "Awesome Task from Modal",
+      column_id: "doing",
+    });
+  });
 });

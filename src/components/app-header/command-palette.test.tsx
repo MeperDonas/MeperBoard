@@ -225,4 +225,22 @@ describe("CommandPalette", () => {
       expect.objectContaining({ type: TOGGLE_LOCAL_CARDS_EVENT }),
     );
   });
+
+  it("navigates options with ArrowDown/ArrowUp and executes active option on Enter", () => {
+    const assign = vi.fn();
+    Object.defineProperty(window, "location", {
+      configurable: true,
+      value: { ...originalLocation, assign, href: originalLocation.href },
+    });
+    mockFetch({ "/api/auth/me": () => jsonResponse({}, 401) });
+    render(<CommandPalette />, { wrapper: queryWrapper(client) });
+    openPalette();
+
+    const input = screen.getByRole("combobox");
+    // Initially option 0 is Go to Board. Pressing ArrowDown moves to Go to Backlog (option 1).
+    fireEvent.keyDown(input, { key: "ArrowDown" });
+    fireEvent.keyDown(input, { key: "Enter" });
+
+    expect(assign).toHaveBeenCalledWith("/backlog");
+  });
 });

@@ -86,7 +86,7 @@ export function RepoSwitcher() {
   }, [repos, query]);
 
   const enabledCount = filtered.length;
-  const safePos = Math.min(activePos, Math.max(0, enabledCount - 1));
+  const safePos = enabledCount > 0 ? Math.min(activePos, enabledCount - 1) : 0;
   const activeIndex = safePos;
 
   // Keep the active option visible while roving.
@@ -99,10 +99,12 @@ export function RepoSwitcher() {
   function handleInputKeyDown(event: ReactKeyboardEvent<HTMLInputElement>) {
     if (event.key === "ArrowDown") {
       event.preventDefault();
-      setActivePos((position) => Math.min(Math.max(0, enabledCount - 1), position + 1));
+      setActivePos((position) => (enabledCount > 0 ? (position + 1) % enabledCount : 0));
     } else if (event.key === "ArrowUp") {
       event.preventDefault();
-      setActivePos((position) => Math.max(0, position - 1));
+      setActivePos((position) =>
+        enabledCount > 0 ? (position - 1 + enabledCount) % enabledCount : 0,
+      );
     } else if (event.key === "Home") {
       event.preventDefault();
       setActivePos(0);
@@ -114,7 +116,6 @@ export function RepoSwitcher() {
       const repo = filtered[activeIndex];
       if (repo) selectRepo(repo.owner, repo.name);
     }
-    // Escape bubbles to the window listener (closes the panel).
   }
 
   function selectRepo(owner: string, name: string) {
@@ -222,12 +223,17 @@ export function RepoSwitcher() {
                           role="option"
                           aria-selected={isSelected}
                           data-active={isActive}
-                          onPointerMove={() => setActivePos(index)}
+                          onMouseMove={(event) => {
+                            if (event.movementX === 0 && event.movementY === 0) return;
+                            setActivePos(index);
+                          }}
                           onClick={() => selectRepo(repo.owner, repo.name)}
                           className={cn(
-                            "flex cursor-pointer items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm transition-colors duration-100",
-                            isActive && "bg-accent text-accent-foreground",
-                            isSelected && "text-primary",
+                            "group flex cursor-pointer items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm transition-colors duration-100",
+                            isActive
+                              ? "bg-accent text-accent-foreground ring-1 ring-primary/30"
+                              : "text-foreground hover:bg-accent/50",
+                            isSelected && "text-primary font-medium",
                           )}
                         >
                           <FolderGit2
@@ -236,7 +242,12 @@ export function RepoSwitcher() {
                           />
                           <span className="min-w-0 flex-1 truncate font-medium">{repo.id}</span>
                           {isSelected && (
-                            <Check className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                            <Check className="h-3.5 w-3.5 shrink-0 text-primary" aria-hidden="true" />
+                          )}
+                          {isActive && (
+                            <span className="ml-auto inline-flex items-center gap-1 rounded bg-background/80 px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground border border-border/60">
+                              <span className="text-[9px]">Select</span> ↵
+                            </span>
                           )}
                         </div>
                       );
