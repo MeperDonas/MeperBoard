@@ -25,14 +25,19 @@ import { Select } from "../ui/select";
 import { CreateCardModal, OPEN_CREATE_LOCAL_CARD_EVENT } from "./create-card-modal";
 
 const STATUS_OPTIONS: { value: LocalStatus; label: string }[] = [
+  { value: "backlog", label: "Backlog" },
   { value: "todo", label: "To Do" },
-  { value: "doing", label: "Doing" },
+  { value: "in-progress", label: "In Progress" },
+  { value: "in-review", label: "In Review" },
   { value: "done", label: "Done" },
 ];
 
-const STATUS_LABEL: Record<LocalStatus, string> = {
+const STATUS_LABEL: Record<string, string> = {
+  backlog: "Backlog",
   todo: "To Do",
-  doing: "Doing",
+  "in-progress": "In Progress",
+  doing: "In Progress",
+  "in-review": "In Review",
   done: "Done",
 };
 
@@ -57,8 +62,10 @@ export function LocalCards({ onClose }: LocalCardsProps) {
   const counts = useMemo(() => {
     return {
       all: cards.length,
+      backlog: cards.filter((c) => statusForColumn(c.column_id) === "backlog").length,
       todo: cards.filter((c) => statusForColumn(c.column_id) === "todo").length,
-      doing: cards.filter((c) => statusForColumn(c.column_id) === "doing").length,
+      inProgress: cards.filter((c) => statusForColumn(c.column_id) === "in-progress").length,
+      inReview: cards.filter((c) => statusForColumn(c.column_id) === "in-review").length,
       done: cards.filter((c) => statusForColumn(c.column_id) === "done").length,
     };
   }, [cards]);
@@ -144,8 +151,10 @@ export function LocalCards({ onClose }: LocalCardsProps) {
           {(
             [
               { id: "all", label: "All", count: counts.all },
+              { id: "backlog", label: "Backlog", count: counts.backlog },
               { id: "todo", label: "To Do", count: counts.todo },
-              { id: "doing", label: "Doing", count: counts.doing },
+              { id: "in-progress", label: "In Prog", count: counts.inProgress },
+              { id: "in-review", label: "Review", count: counts.inReview },
               { id: "done", label: "Done", count: counts.done },
             ] as const
           ).map((tab) => {
@@ -154,9 +163,9 @@ export function LocalCards({ onClose }: LocalCardsProps) {
               <button
                 key={tab.id}
                 type="button"
-                onClick={() => setSelectedFilter(tab.id)}
+                onClick={() => setSelectedFilter(tab.id as "all" | LocalStatus)}
                 className={cn(
-                  "flex shrink-0 items-center gap-1.5 rounded-lg px-2 py-1 text-[11px] font-medium transition-colors",
+                  "flex shrink-0 items-center gap-1 rounded-lg px-2 py-1 text-[10px] font-medium transition-colors",
                   isSelected
                     ? "bg-primary text-primary-foreground font-semibold shadow-2xs"
                     : "text-muted-foreground hover:bg-accent hover:text-foreground",
@@ -393,7 +402,9 @@ function LocalCardEditForm({
 
 /** Map a local card's stored column back to a status for the status selector. */
 function statusForColumn(columnId: string): LocalStatus {
-  if (columnId === "doing") return "doing";
+  if (columnId === "backlog") return "backlog";
+  if (columnId === "in-progress" || columnId === "doing") return "in-progress";
+  if (columnId === "in-review") return "in-review";
   if (columnId === "done") return "done";
   return "todo";
 }

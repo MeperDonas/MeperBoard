@@ -38,7 +38,7 @@ describe("useLocalCards", () => {
 
     const stored = await localItemRepo.getAll();
     expect(stored).toHaveLength(1);
-    expect(stored[0]).toMatchObject({ id: "l-1", title: "Buy milk", column_id: "doing" });
+    expect(stored[0]).toMatchObject({ id: "l-1", title: "Buy milk", column_id: "in-progress" });
   });
 
   it("edits an existing card in place", async () => {

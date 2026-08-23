@@ -11,11 +11,13 @@
 /** Canonical column keys the domain resolves into. */
 export const COLUMN = {
   backlog: "backlog",
-  inReview: "in-review",
-  draft: "draft",
-  done: "done",
   todo: "todo",
-  doing: "doing",
+  inProgress: "in-progress",
+  inReview: "in-review",
+  done: "done",
+  // Backwards-compatible aliases for legacy references
+  doing: "in-progress",
+  draft: "in-progress",
 } as const;
 
 /** A resolved column key. */

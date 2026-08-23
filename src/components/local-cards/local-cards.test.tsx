@@ -75,13 +75,13 @@ describe("LocalCards", () => {
     fireEvent.change(screen.getByLabelText("New card title"), {
       target: { value: "Ship v1" },
     });
-    changeSelect("New card status", "Doing");
+    changeSelect("New card status", "In Progress");
     fireEvent.click(screen.getByRole("button", { name: "Add card" }));
 
     await waitFor(() => expect(screen.getByText("Ship v1")).toBeInTheDocument());
 
     const stored = await localItemRepo.getAll();
-    expect(stored[0]).toMatchObject({ title: "Ship v1", column_id: "doing" });
+    expect(stored[0]).toMatchObject({ title: "Ship v1", column_id: "in-progress" });
   });
 
   it("does not create a card with a blank title", async () => {

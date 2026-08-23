@@ -44,13 +44,14 @@ const SOURCE_ORDER = ["github", "local"] as const;
 /** Fixed state ordering; unknown states keep first-seen order after these. */
 const STATE_ORDER = ["open", "closed"] as const;
 
-const COLUMN_ORDER = ["todo", "doing", "in-review", "draft", "backlog", "done"] as const;
+const COLUMN_ORDER = ["backlog", "todo", "in-progress", "in-review", "done"] as const;
 const COLUMN_LABEL: Record<string, string> = {
-  todo: "To Do",
-  doing: "Doing",
-  "in-review": "In Review",
-  draft: "Draft",
   backlog: "Backlog",
+  todo: "To Do",
+  "in-progress": "In Progress",
+  doing: "In Progress",
+  "in-review": "In Review",
+  draft: "In Progress",
   done: "Done",
 };
 

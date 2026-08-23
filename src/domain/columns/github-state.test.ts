@@ -27,10 +27,10 @@ describe("githubStateStrategy", () => {
     ).toBe("done");
   });
 
-  it("maps a draft PR to Draft", () => {
+  it("maps a draft PR to In Progress", () => {
     expect(
       githubStateStrategy.columnFor({ kind: "pull", state: "open", draft: true, merged: false }),
-    ).toBe("draft");
+    ).toBe("in-progress");
   });
 
   it("maps a closed, unmerged PR to Done", () => {

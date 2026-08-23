@@ -11,8 +11,9 @@ describe("localStatusStrategy", () => {
     expect(localStatusStrategy.columnFor("todo")).toBe("todo");
   });
 
-  it("maps doing to the doing column", () => {
-    expect(localStatusStrategy.columnFor("doing")).toBe("doing");
+  it("maps doing and in-progress to the in-progress column", () => {
+    expect(localStatusStrategy.columnFor("doing")).toBe("in-progress");
+    expect(localStatusStrategy.columnFor("in-progress")).toBe("in-progress");
   });
 
   it("maps done to the done column", () => {

@@ -36,8 +36,10 @@ interface CreateCardModalProps {
 }
 
 const STATUS_ITEMS: { value: LocalStatus; label: string; color: string; bg: string }[] = [
+  { value: "backlog", label: "Backlog", color: "text-slate-500 dark:text-slate-400", bg: "bg-slate-500/10 border-slate-500/30" },
   { value: "todo", label: "To Do", color: "text-amber-500 dark:text-amber-400", bg: "bg-amber-500/10 border-amber-500/30" },
-  { value: "doing", label: "Doing", color: "text-blue-500 dark:text-blue-400", bg: "bg-blue-500/10 border-blue-500/30" },
+  { value: "in-progress", label: "In Progress", color: "text-blue-500 dark:text-blue-400", bg: "bg-blue-500/10 border-blue-500/30" },
+  { value: "in-review", label: "In Review", color: "text-purple-500 dark:text-purple-400", bg: "bg-purple-500/10 border-purple-500/30" },
   { value: "done", label: "Done", color: "text-emerald-500 dark:text-emerald-400", bg: "bg-emerald-500/10 border-emerald-500/30" },
 ];
 

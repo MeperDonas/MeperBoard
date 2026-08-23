@@ -126,23 +126,22 @@ describe("buildBoard", () => {
     const cards = [
       toCard(makeGithubItem({ number: 1, state: "open" })),
       toCard(makeGithubItem({ number: 2, state: "closed" })),
-      toCard(makeLocalItem({ id: "l1", column_id: "doing" })),
+      toCard(makeLocalItem({ id: "l1", column_id: "in-progress" })),
     ];
 
     const board = buildBoard(DEFAULT_BOARD_COLUMNS, cards);
 
     expect(board.columns.map((c) => c.id)).toEqual([
       "backlog",
-      "in-review",
-      "draft",
-      "done",
       "todo",
-      "doing",
+      "in-progress",
+      "in-review",
+      "done",
     ]);
     expect(board.columns[0].cards).toHaveLength(1); // backlog
-    expect(board.columns[2].cards).toHaveLength(0); // draft (empty)
-    expect(board.columns[3].cards).toHaveLength(1); // done
-    expect(board.columns[5].cards).toHaveLength(1); // doing
+    expect(board.columns[1].cards).toHaveLength(0); // todo (empty)
+    expect(board.columns[2].cards).toHaveLength(1); // in-progress (doing)
+    expect(board.columns[4].cards).toHaveLength(1); // done
   });
 });
 
@@ -163,7 +162,7 @@ describe("loadCards / loadBoard (IndexedDB)", () => {
     await githubItemRepo.upsert(makeGithubItem({ number: 1 }));
 
     const board = await loadBoard("meperdonas/meperboard");
-    expect(board.columns).toHaveLength(6);
+    expect(board.columns).toHaveLength(5);
     expect(board.columns[0].cards).toHaveLength(1);
   });
 

@@ -149,11 +149,10 @@ export async function loadCards(activeRepoId?: RepoId): Promise<Card[]> {
 /** The canonical board layout, used until real columns are seeded. */
 export const DEFAULT_BOARD_COLUMNS: Column[] = [
   { id: "backlog", key: "backlog", title: "Backlog", order: 0, strategy: "github-state" },
-  { id: "in-review", key: "in-review", title: "In Review", order: 1, strategy: "github-state" },
-  { id: "draft", key: "draft", title: "Draft", order: 2, strategy: "github-state" },
-  { id: "done", key: "done", title: "Done", order: 3, strategy: "github-state" },
-  { id: "todo", key: "todo", title: "To Do", order: 4, strategy: "local-status" },
-  { id: "doing", key: "doing", title: "Doing", order: 5, strategy: "local-status" },
+  { id: "todo", key: "todo", title: "To Do", order: 1, strategy: "local-status" },
+  { id: "in-progress", key: "in-progress", title: "In Progress", order: 2, strategy: "local-status" },
+  { id: "in-review", key: "in-review", title: "In Review", order: 3, strategy: "github-state" },
+  { id: "done", key: "done", title: "Done", order: 4, strategy: "github-state" },
 ];
 
 export interface BoardColumn extends Column {
