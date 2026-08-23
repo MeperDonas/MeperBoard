@@ -25,6 +25,7 @@ import { useLocalCards } from "../../state";
 import { MarkdownContent } from "../ui/MarkdownContent";
 import { Button } from "../ui/button";
 import { Portal } from "../ui/portal";
+import { Select } from "../ui/select";
 
 export const OPEN_CREATE_LOCAL_CARD_EVENT = "meperboard:open-create-local-card";
 
@@ -206,9 +207,20 @@ export function CreateCardModal({
           <form onSubmit={handleSubmit} className="flex flex-col gap-4 p-5">
             {/* Status Segmented Control */}
             <div>
-              <label className="mb-1.5 block text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                Initial Column / Status
-              </label>
+              <div className="mb-1.5 flex items-center justify-between">
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                  Initial Column / Status
+                </label>
+                <div className="text-xs font-medium text-muted-foreground">
+                  <Select
+                    aria-label="New card status"
+                    options={STATUS_ITEMS.map((item) => ({ value: item.value, label: item.label }))}
+                    value={status}
+                    onValueChange={(next) => setStatus(next as LocalStatus)}
+                    className="w-28"
+                  />
+                </div>
+              </div>
               <div className="grid grid-cols-3 gap-2">
                 {STATUS_ITEMS.map((item) => {
                   const isSelected = item.value === status;
@@ -352,12 +364,13 @@ export function CreateCardModal({
                   type="submit"
                   variant="primary"
                   size="sm"
+                  aria-label="Add card"
                   disabled={!title.trim() || create.isPending}
                   loading={create.isPending}
                   className="rounded-xl px-4 text-xs font-semibold shadow-md shadow-primary/20"
                 >
                   <Plus className="h-3.5 w-3.5 mr-1" />
-                  Create Card
+                  Add card
                 </Button>
               </div>
             </div>

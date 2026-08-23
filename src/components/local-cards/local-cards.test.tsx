@@ -22,10 +22,10 @@ function changeSelect(name: string, optionLabel: string) {
   fireEvent.click(screen.getByRole("option", { name: optionLabel }));
 }
 
-/** Wait for the create form to appear (i.e. the list query has resolved). */
-async function waitForForm() {
+/** Wait for the create button to appear (i.e. the list query has resolved). */
+async function waitForButton() {
   await waitFor(() =>
-    expect(screen.getByRole("button", { name: "Add card" })).toBeInTheDocument(),
+    expect(screen.getByRole("button", { name: "New local card" })).toBeInTheDocument(),
   );
 }
 
@@ -42,9 +42,14 @@ describe("LocalCards", () => {
     expect(screen.getByText(/no local cards yet/i)).toBeInTheDocument();
   });
 
-  it("creates a local card in the To Do column by default", async () => {
+  it("creates a local card via the create modal in the To Do column by default", async () => {
     renderLocalCards();
-    await waitForForm();
+    await waitForButton();
+
+    // Open modal
+    fireEvent.click(screen.getByRole("button", { name: "New local card" }));
+
+    expect(await screen.findByRole("dialog", { name: /create new local card/i })).toBeInTheDocument();
 
     fireEvent.change(screen.getByLabelText("New card title"), {
       target: { value: "Buy milk" },
@@ -58,9 +63,14 @@ describe("LocalCards", () => {
     expect(stored[0]).toMatchObject({ title: "Buy milk", column_id: "todo" });
   });
 
-  it("creates a local card with a chosen status", async () => {
+  it("creates a local card via the modal with a chosen status", async () => {
     renderLocalCards();
-    await waitForForm();
+    await waitForButton();
+
+    // Open modal
+    fireEvent.click(screen.getByRole("button", { name: "New local card" }));
+
+    expect(await screen.findByRole("dialog", { name: /create new local card/i })).toBeInTheDocument();
 
     fireEvent.change(screen.getByLabelText("New card title"), {
       target: { value: "Ship v1" },
@@ -76,7 +86,11 @@ describe("LocalCards", () => {
 
   it("does not create a card with a blank title", async () => {
     renderLocalCards();
-    await waitForForm();
+    await waitForButton();
+
+    fireEvent.click(screen.getByRole("button", { name: "New local card" }));
+
+    expect(await screen.findByRole("dialog", { name: /create new local card/i })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Add card" }));
 
@@ -134,33 +148,5 @@ describe("LocalCards", () => {
 
     await waitFor(() => expect(screen.queryByText("Buy milk")).not.toBeInTheDocument());
     expect(await localItemRepo.getAll()).toHaveLength(0);
-  });
-
-  it("opens the impressive create modal via the header trigger button and creates a card", async () => {
-    renderLocalCards();
-    await waitForForm();
-
-    fireEvent.click(screen.getByRole("button", { name: /modal window/i }));
-
-    expect(await screen.findByRole("dialog", { name: /create new local card/i })).toBeInTheDocument();
-
-    const titleInputs = screen.getAllByLabelText("New card title");
-    // The modal's input is the second one
-    const modalTitleInput = titleInputs[titleInputs.length - 1];
-    fireEvent.change(modalTitleInput, { target: { value: "Awesome Task from Modal" } });
-
-    // Pick Doing status in the modal
-    fireEvent.click(screen.getByRole("button", { name: "Doing" }));
-
-    // Click Create Card in the modal
-    fireEvent.click(screen.getByRole("button", { name: /create card/i }));
-
-    await waitFor(() => expect(screen.getByText("Awesome Task from Modal")).toBeInTheDocument());
-
-    const stored = await localItemRepo.getAll();
-    expect(stored.find((item) => item.title === "Awesome Task from Modal")).toMatchObject({
-      title: "Awesome Task from Modal",
-      column_id: "doing",
-    });
   });
 });

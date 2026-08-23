@@ -63,20 +63,6 @@ export function RepoSwitcher() {
     return () => window.removeEventListener(OPEN_REPO_SWITCHER_EVENT, onOpen);
   }, []);
 
-  // Fetch the live list is gated by `enabled={open}` on `useUserRepos`.
-  useEffect(() => {
-    if (open) inputRef.current?.focus();
-  }, [open]);
-
-  // Close on Escape (window-level so it works while the input is focused).
-  useEffect(() => {
-    function onKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape" && openRef.current) setOpen(false);
-    }
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, []);
-
   const filtered = useMemo<{ owner: string; name: string; id: string }[]>(() => {
     const needle = query.trim().toLowerCase();
     if (!needle) return repos;
@@ -89,6 +75,74 @@ export function RepoSwitcher() {
   const safePos = enabledCount > 0 ? Math.min(activePos, enabledCount - 1) : 0;
   const activeIndex = safePos;
 
+  const enabledCountRef = useRef(enabledCount);
+  enabledCountRef.current = enabledCount;
+
+  const activeIndexRef = useRef(activeIndex);
+  activeIndexRef.current = activeIndex;
+
+  const filteredRef = useRef(filtered);
+  filteredRef.current = filtered;
+
+  function selectRepo(owner: string, name: string) {
+    setActive.mutate({ owner, name });
+    setOpen(false);
+  }
+
+  // Window-level keydown handler for Escape, Arrow keys, Enter, Home, End
+  useEffect(() => {
+    function onKeyDown(event: KeyboardEvent) {
+      if (!openRef.current) return;
+      if (event.key === "Escape") {
+        event.preventDefault();
+        setOpen(false);
+        return;
+      }
+      if (event.key === "ArrowDown") {
+        event.preventDefault();
+        const count = enabledCountRef.current;
+        if (count > 0) {
+          setActivePos((prev) => (prev + 1) % count);
+        }
+      } else if (event.key === "ArrowUp") {
+        event.preventDefault();
+        const count = enabledCountRef.current;
+        if (count > 0) {
+          setActivePos((prev) => (prev - 1 + count) % count);
+        }
+      } else if (event.key === "Home") {
+        event.preventDefault();
+        setActivePos(0);
+      } else if (event.key === "End") {
+        event.preventDefault();
+        const count = enabledCountRef.current;
+        if (count > 0) {
+          setActivePos(count - 1);
+        }
+      } else if (event.key === "Enter") {
+        event.preventDefault();
+        const idx = activeIndexRef.current;
+        const list = filteredRef.current;
+        const repo = list[idx];
+        if (repo) {
+          selectRepo(repo.owner, repo.name);
+        }
+      }
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
+
+  // Fetch the live list is gated by `enabled={open}` on `useUserRepos`.
+  useEffect(() => {
+    if (open) {
+      const timer = setTimeout(() => {
+        inputRef.current?.focus();
+      }, 30);
+      return () => clearTimeout(timer);
+    }
+  }, [open]);
+
   // Keep the active option visible while roving.
   useEffect(() => {
     if (!open || enabledCount === 0) return;
@@ -97,30 +151,9 @@ export function RepoSwitcher() {
   }, [open, activeIndex, enabledCount, listboxId]);
 
   function handleInputKeyDown(event: ReactKeyboardEvent<HTMLInputElement>) {
-    if (event.key === "ArrowDown") {
-      event.preventDefault();
-      setActivePos((position) => (enabledCount > 0 ? (position + 1) % enabledCount : 0));
-    } else if (event.key === "ArrowUp") {
-      event.preventDefault();
-      setActivePos((position) =>
-        enabledCount > 0 ? (position - 1 + enabledCount) % enabledCount : 0,
-      );
-    } else if (event.key === "Home") {
-      event.preventDefault();
-      setActivePos(0);
-    } else if (event.key === "End") {
-      event.preventDefault();
-      setActivePos(Math.max(0, enabledCount - 1));
-    } else if (event.key === "Enter") {
-      event.preventDefault();
-      const repo = filtered[activeIndex];
-      if (repo) selectRepo(repo.owner, repo.name);
+    if (event.key === "ArrowDown" || event.key === "ArrowUp" || event.key === "Enter") {
+      return;
     }
-  }
-
-  function selectRepo(owner: string, name: string) {
-    setActive.mutate({ owner, name });
-    setOpen(false);
   }
 
   const currentActive = activeRepo.data
