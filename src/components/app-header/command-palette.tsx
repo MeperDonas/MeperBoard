@@ -125,36 +125,6 @@ export function CommandPalette() {
     window.dispatchEvent(new CustomEvent(OPEN_REPO_SWITCHER_EVENT));
   }, []);
 
-  // Global shortcut + Escape + dialog keyboard navigation handling.
-  useEffect(() => {
-    function onWindowKeyDown(event: KeyboardEvent) {
-      if ((event.metaKey || event.ctrlKey) && event.key?.toLowerCase() === "k") {
-        event.preventDefault();
-        if (openRef.current) {
-          setOpen(false);
-        } else {
-          openPalette();
-        }
-        return;
-      }
-      if (event.key === "Escape" && openRef.current) {
-        setOpen(false);
-        return;
-      }
-    }
-    window.addEventListener("keydown", onWindowKeyDown);
-    return () => window.removeEventListener("keydown", onWindowKeyDown);
-  }, [openPalette]);
-
-  // On open: reset the query/selection and focus the search field.
-  useEffect(() => {
-    if (open) {
-      setQuery("");
-      setActivePos(0);
-      inputRef.current?.focus();
-    }
-  }, [open]);
-
   const commands = useMemo<Command[]>(
     () =>
       buildCommands({
@@ -186,12 +156,14 @@ export function CommandPalette() {
   const safeActivePos = enabledCount > 0 ? Math.min(activePos, enabledCount - 1) : 0;
   const activeIndex = enabledIndices[safeActivePos] ?? -1;
 
-  // Keep the active option visible while roving with the keyboard.
-  useEffect(() => {
-    if (!open || activeIndex < 0) return;
-    const node = document.getElementById(`${listboxId}-option-${activeIndex}`);
-    node?.scrollIntoView?.({ block: "nearest" });
-  }, [open, activeIndex, listboxId]);
+  const enabledCountRef = useRef(enabledCount);
+  enabledCountRef.current = enabledCount;
+
+  const activeIndexRef = useRef(activeIndex);
+  activeIndexRef.current = activeIndex;
+
+  const visibleCommandsRef = useRef(visibleCommands);
+  visibleCommandsRef.current = visibleCommands;
 
   function runCommand(command: Command) {
     if (command.disabled || !command.run) return;
@@ -199,25 +171,85 @@ export function CommandPalette() {
     close();
   }
 
-  function handleInputKeyDown(event: ReactKeyboardEvent<HTMLInputElement>) {
-    if (event.key === "ArrowDown") {
-      event.preventDefault();
-      setActivePos((position) => (enabledCount > 0 ? (position + 1) % enabledCount : 0));
-    } else if (event.key === "ArrowUp") {
-      event.preventDefault();
-      setActivePos((position) =>
-        enabledCount > 0 ? (position - 1 + enabledCount) % enabledCount : 0,
-      );
-    } else if (event.key === "Home") {
-      event.preventDefault();
+  // Global shortcut + Escape + dialog keyboard navigation handling.
+  useEffect(() => {
+    function onWindowKeyDown(event: KeyboardEvent) {
+      if ((event.metaKey || event.ctrlKey) && event.key?.toLowerCase() === "k") {
+        event.preventDefault();
+        if (openRef.current) {
+          setOpen(false);
+        } else {
+          openPalette();
+        }
+        return;
+      }
+      if (!openRef.current) return;
+
+      if (event.key === "Escape") {
+        event.preventDefault();
+        setOpen(false);
+        return;
+      }
+
+      if (event.key === "ArrowDown") {
+        event.preventDefault();
+        const count = enabledCountRef.current;
+        if (count > 0) {
+          setActivePos((prev) => (prev + 1) % count);
+        }
+      } else if (event.key === "ArrowUp") {
+        event.preventDefault();
+        const count = enabledCountRef.current;
+        if (count > 0) {
+          setActivePos((prev) => (prev - 1 + count) % count);
+        }
+      } else if (event.key === "Home") {
+        event.preventDefault();
+        setActivePos(0);
+      } else if (event.key === "End") {
+        event.preventDefault();
+        const count = enabledCountRef.current;
+        if (count > 0) {
+          setActivePos(count - 1);
+        }
+      } else if (event.key === "Enter") {
+        event.preventDefault();
+        const idx = activeIndexRef.current;
+        const cmds = visibleCommandsRef.current;
+        const cmd = cmds[idx];
+        if (cmd?.run && !cmd.disabled) {
+          cmd.run();
+          setOpen(false);
+        }
+      }
+    }
+    window.addEventListener("keydown", onWindowKeyDown);
+    return () => window.removeEventListener("keydown", onWindowKeyDown);
+  }, [openPalette]);
+
+  // On open: reset the query/selection and focus the search field.
+  useEffect(() => {
+    if (open) {
+      setQuery("");
       setActivePos(0);
-    } else if (event.key === "End") {
-      event.preventDefault();
-      setActivePos(Math.max(0, enabledCount - 1));
-    } else if (event.key === "Enter") {
-      event.preventDefault();
-      const command = visibleCommands[activeIndex];
-      if (command?.run) runCommand(command);
+      const timer = setTimeout(() => {
+        inputRef.current?.focus();
+      }, 30);
+      return () => clearTimeout(timer);
+    }
+  }, [open]);
+
+  // Keep the active option visible while roving with the keyboard.
+  useEffect(() => {
+    if (!open || activeIndex < 0) return;
+    const node = document.getElementById(`${listboxId}-option-${activeIndex}`);
+    node?.scrollIntoView?.({ block: "nearest" });
+  }, [open, activeIndex, listboxId]);
+
+  function handleInputKeyDown(event: ReactKeyboardEvent<HTMLInputElement>) {
+    if (event.key === "ArrowDown" || event.key === "ArrowUp" || event.key === "Enter") {
+      // Handled by the window keydown listener above
+      return;
     }
   }
 
