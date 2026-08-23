@@ -9,10 +9,12 @@ import {
   LogOut,
   Moon,
   PanelRight,
+  Plus,
   RefreshCw,
   Search,
   Sun,
-} from "lucide-react";import {
+} from "lucide-react";
+import {
   useCallback,
   useEffect,
   useId,
@@ -35,6 +37,7 @@ import {
   saveStoredAccent,
 } from "../../lib/themes";
 import { useSync } from "../../state";
+import { OPEN_CREATE_LOCAL_CARD_EVENT } from "../local-cards";
 import { Portal } from "../ui/portal";
 import { GithubMark } from "./github-mark";
 import { OPEN_REPO_SWITCHER_EVENT } from "./repo-switcher";
@@ -122,17 +125,21 @@ export function CommandPalette() {
     window.dispatchEvent(new CustomEvent(OPEN_REPO_SWITCHER_EVENT));
   }, []);
 
-  // Global shortcut + Escape handling. Mounted for the whole header so ⌘K works
-  // while the palette is closed; Escape only closes when it is open.
+  // Global shortcut + Escape + dialog keyboard navigation handling.
   useEffect(() => {
     function onWindowKeyDown(event: KeyboardEvent) {
       if ((event.metaKey || event.ctrlKey) && event.key?.toLowerCase() === "k") {
         event.preventDefault();
-        openPalette();
+        if (openRef.current) {
+          setOpen(false);
+        } else {
+          openPalette();
+        }
         return;
       }
       if (event.key === "Escape" && openRef.current) {
         setOpen(false);
+        return;
       }
     }
     window.addEventListener("keydown", onWindowKeyDown);
@@ -176,7 +183,7 @@ export function CommandPalette() {
     [visibleCommands],
   );
   const enabledCount = enabledIndices.length;
-  const safeActivePos = Math.min(activePos, Math.max(0, enabledCount - 1));
+  const safeActivePos = enabledCount > 0 ? Math.min(activePos, enabledCount - 1) : 0;
   const activeIndex = enabledIndices[safeActivePos] ?? -1;
 
   // Keep the active option visible while roving with the keyboard.
@@ -187,17 +194,20 @@ export function CommandPalette() {
   }, [open, activeIndex, listboxId]);
 
   function runCommand(command: Command) {
-    command.run?.();
+    if (command.disabled || !command.run) return;
+    command.run();
     close();
   }
 
   function handleInputKeyDown(event: ReactKeyboardEvent<HTMLInputElement>) {
     if (event.key === "ArrowDown") {
       event.preventDefault();
-      setActivePos((position) => Math.min(enabledCount - 1, position + 1));
+      setActivePos((position) => (enabledCount > 0 ? (position + 1) % enabledCount : 0));
     } else if (event.key === "ArrowUp") {
       event.preventDefault();
-      setActivePos((position) => Math.max(0, position - 1));
+      setActivePos((position) =>
+        enabledCount > 0 ? (position - 1 + enabledCount) % enabledCount : 0,
+      );
     } else if (event.key === "Home") {
       event.preventDefault();
       setActivePos(0);
@@ -209,11 +219,9 @@ export function CommandPalette() {
       const command = visibleCommands[activeIndex];
       if (command?.run) runCommand(command);
     }
-    // Escape bubbles to the window listener (closes the palette).
   }
 
-  const shortcutLabel =
-    typeof navigator !== "undefined" && /mac|iphone|ipad/i.test(navigator.platform) ? "⌘K" : "Ctrl K";
+  const shortcutLabel = "Ctrl-K";
 
   return (
     <>
@@ -321,7 +329,8 @@ export function CommandPalette() {
                               aria-selected={isActive}
                               aria-disabled={command.disabled || undefined}
                               data-active={isActive}
-                              onPointerMove={() => {
+                              onMouseMove={(event) => {
+                                if (event.movementX === 0 && event.movementY === 0) return;
                                 const position = enabledIndices.indexOf(index);
                                 if (position >= 0) setActivePos(position);
                               }}
@@ -330,8 +339,10 @@ export function CommandPalette() {
                                 runCommand(command);
                               }}
                               className={cn(
-                                "flex cursor-pointer items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm transition-colors duration-100",
-                                isActive && !command.disabled && "bg-accent text-accent-foreground",
+                                "group flex cursor-pointer items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm transition-colors duration-100",
+                                isActive && !command.disabled
+                                  ? "bg-accent text-accent-foreground ring-1 ring-primary/30"
+                                  : "text-foreground hover:bg-accent/50",
                                 command.disabled && "cursor-not-allowed opacity-60",
                               )}
                             >
@@ -344,6 +355,11 @@ export function CommandPalette() {
                                   </p>
                                 )}
                               </div>
+                              {isActive && !command.disabled && (
+                                <span className="ml-auto inline-flex items-center gap-1 rounded bg-background/80 px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground border border-border/60">
+                                  <span className="text-[9px]">Select</span> ↵
+                                </span>
+                              )}
                             </div>
                           );
                         })}
@@ -506,9 +522,11 @@ function buildCommands({
       id: "cards-create-local",
       group: "Cards",
       label: "Create local card",
-      keywords: "create new add local card",
-      disabled: true,
-      hint: "Card creation is on the roadmap",
+      keywords: "create new add local card task note",
+      icon: Plus,
+      run: () => {
+        window.dispatchEvent(new CustomEvent(OPEN_CREATE_LOCAL_CARD_EVENT));
+      },
     },
   );
 

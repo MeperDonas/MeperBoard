@@ -1,5 +1,6 @@
 "use client";
 
+import { Plus, Sparkles } from "lucide-react";
 import { useState, type FormEvent, type ReactNode } from "react";
 
 import type { LocalItem } from "../../data/types";
@@ -9,6 +10,7 @@ import { useLocalCards } from "../../state";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Select } from "../ui/select";
+import { CreateCardModal, OPEN_CREATE_LOCAL_CARD_EVENT } from "./create-card-modal";
 
 const STATUS_OPTIONS: { value: LocalStatus; label: string }[] = [
   { value: "todo", label: "To Do" },
@@ -51,6 +53,10 @@ export function LocalCards() {
     setEditingId(null);
   }
 
+  function handleOpenModal() {
+    window.dispatchEvent(new CustomEvent(OPEN_CREATE_LOCAL_CARD_EVENT));
+  }
+
   if (list.isPending) {
     return <LocalCardsSkeleton />;
   }
@@ -60,7 +66,23 @@ export function LocalCards() {
 
   return (
     <section className="p-4 md:px-6 lg:pl-0" role="region" aria-label="Local cards">
-      <h2 className="mb-3 text-sm font-medium tracking-tight">Local cards</h2>
+      <CreateCardModal />
+
+      <div className="mb-3 flex items-center justify-between">
+        <h2 className="text-sm font-semibold tracking-tight text-foreground flex items-center gap-1.5">
+          <Sparkles className="h-4 w-4 text-primary" />
+          Local cards
+        </h2>
+        <button
+          type="button"
+          onClick={handleOpenModal}
+          title="Open impressive modal creator (or press Ctrl-K -> Create local card)"
+          className="inline-flex items-center gap-1 rounded-lg border border-primary/40 bg-primary/10 px-2 py-1 text-xs font-semibold text-primary transition-all duration-150 hover:bg-primary/20 hover:border-primary shadow-xs"
+        >
+          <Plus className="h-3.5 w-3.5" />
+          Modal Window
+        </button>
+      </div>
 
       <form
         onSubmit={handleSubmit}
