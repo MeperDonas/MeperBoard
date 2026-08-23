@@ -79,7 +79,7 @@ export function BoardWorkspace() {
       </div>
 
       <div className="flex-1 min-h-0 overflow-hidden">
-        <RailLayout collapsed={collapsed} onSelectCard={setSelectedCard} />
+        <RailLayout collapsed={collapsed} onToggle={toggle} onSelectCard={setSelectedCard} />
       </div>
 
       <CardPreviewDrawer
@@ -151,18 +151,13 @@ function LocalCountPill() {
   );
 }
 
-/**
- * Board + Local Cards rail. On desktop (lg+) the rail collapses via a
- * framer-motion width+opacity spring (~250ms); below lg it stacks full-width and the
- * toggle simply hides it. A collapsed panel is pulled out of the accessibility
- * tree (`aria-hidden` + `inert`) while the shrink animation plays, so hidden
- * form fields never join the tab order.
- */
 function RailLayout({
   collapsed,
+  onToggle,
   onSelectCard,
 }: {
   collapsed: boolean;
+  onToggle: () => void;
   onSelectCard: (card: Card) => void;
 }) {
   const isDesktop = useMinWidth(1024);
@@ -170,13 +165,7 @@ function RailLayout({
   const moveCard = useMoveCard();
 
   return (
-    <div
-      className={cn(
-        "flex h-full flex-col",
-        !collapsed && "gap-4 lg:flex-row lg:gap-4",
-        collapsed && "flex-col lg:flex-row",
-      )}
-    >
+    <div className="flex h-full flex-col lg:flex-row overflow-hidden">
       <div className="h-full min-w-0 flex-1 overflow-hidden">
         <Board
           onMoveCard={(move) => moveCard.mutate(move)}
@@ -193,17 +182,20 @@ function RailLayout({
                 opacity: collapsed ? 0 : 1,
               }
             : {
-                width: collapsed ? 0 : "auto",
+                width: collapsed ? 0 : "100%",
                 opacity: collapsed ? 0 : 1,
               }
         }
         transition={reduceMotion ? { duration: 0 } : SPRING_RAIL}
         aria-hidden={collapsed || undefined}
         inert={collapsed || undefined}
-        className="h-full shrink-0 overflow-y-auto overflow-x-hidden no-scrollbar"
+        className={cn(
+          "h-full shrink-0 overflow-hidden border-l border-border/60 bg-card/40 backdrop-blur-md",
+          collapsed && "border-none",
+        )}
       >
-        <div className="w-full min-w-0 p-4 lg:w-[340px] lg:p-0 lg:pr-6 lg:pt-4">
-          <LocalCards />
+        <div className="h-full w-full lg:w-[340px]">
+          <LocalCards onClose={onToggle} />
         </div>
       </motion.aside>
     </div>
