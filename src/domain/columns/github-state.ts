@@ -21,9 +21,9 @@ export interface GithubItemState {
  *
  * - issue  open   → Backlog
  * - issue  closed → Done
+ * - pull   draft  → In Progress
  * - pull   open   → In Review
  * - pull   merged → Done
- * - pull   draft  → Draft
  * - pull   closed (unmerged) → Done
  */
 export const githubStateStrategy: ColumnStrategy<GithubItemState> = {
@@ -31,7 +31,7 @@ export const githubStateStrategy: ColumnStrategy<GithubItemState> = {
 
   columnFor(item) {
     if (item.kind === "pull") {
-      if (item.draft) return COLUMN.draft;
+      if (item.draft) return COLUMN.inProgress;
       if (item.merged || item.state === "closed") return COLUMN.done;
       return COLUMN.inReview;
     }

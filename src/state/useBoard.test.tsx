@@ -31,7 +31,7 @@ describe("useBoard", () => {
     const board = result.current.data!;
     expect(board.columns[0].cards).toHaveLength(1);
     expect(board.columns[0].cards[0]).toMatchObject({ number: 1, columnId: "backlog" });
-    expect(board.columns[3].cards).toHaveLength(1);
+    expect(board.columns[4].cards).toHaveLength(1);
   });
 
   it("returns empty columns with no error when the store is empty", async () => {
@@ -40,7 +40,7 @@ describe("useBoard", () => {
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
     const board = result.current.data!;
-    expect(board.columns).toHaveLength(6);
+    expect(board.columns).toHaveLength(5);
     expect(board.columns.every((c) => c.cards.length === 0)).toBe(true);
     expect(result.current.error).toBeNull();
   });

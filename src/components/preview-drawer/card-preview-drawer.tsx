@@ -35,11 +35,10 @@ export interface CardPreviewDrawerProps {
 }
 
 const DEFAULT_COLUMNS: ColumnOption[] = [
-  { id: "todo", title: "To Do" },
-  { id: "doing", title: "Doing" },
-  { id: "in-review", title: "In Review" },
-  { id: "draft", title: "Draft" },
   { id: "backlog", title: "Backlog" },
+  { id: "todo", title: "To Do" },
+  { id: "in-progress", title: "In Progress" },
+  { id: "in-review", title: "In Review" },
   { id: "done", title: "Done" },
 ];
 

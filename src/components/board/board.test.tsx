@@ -11,7 +11,7 @@ import {
 } from "../../state/test-utils";
 import { Board, type BoardProps } from "./board";
 
-const COLUMN_TITLES = ["Backlog", "In Review", "Draft", "Done", "To Do", "Doing"];
+const COLUMN_TITLES = ["Backlog", "To Do", "In Progress", "In Review", "Done"];
 
 function renderBoard(props: BoardProps = {}) {
   const client = createTestQueryClient();
