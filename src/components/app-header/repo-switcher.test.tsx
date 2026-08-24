@@ -157,4 +157,17 @@ describe("RepoSwitcher", () => {
     );
     expect(screen.getByText("All Repositories")).toBeInTheDocument();
   });
+
+  it("automatically seeds active repositories into the Recent section", async () => {
+    await repoRepo.setActive("acme", "widgets");
+    mockFetch({ "/api/github/user/repos": () => jsonResponse(liveRepos) });
+
+    render(<RepoSwitcher />, { wrapper: queryWrapper(client) });
+    openSwitcher();
+
+    await waitFor(() =>
+      expect(screen.getByText("Recent")).toBeInTheDocument(),
+    );
+    expect(screen.getByText("All Repositories")).toBeInTheDocument();
+  });
 });

@@ -66,6 +66,36 @@ export function RepoSwitcher() {
     return () => window.removeEventListener(OPEN_REPO_SWITCHER_EVENT, onOpen);
   }, []);
 
+  const effectiveRecentIds = useMemo(() => {
+    const list: string[] = [];
+    const seen = new Set<string>();
+
+    for (const id of recentIds) {
+      const lower = id.toLowerCase();
+      if (!seen.has(lower)) {
+        seen.add(lower);
+        list.push(id);
+      }
+    }
+
+    for (const active of activeRepos) {
+      const lower = active.id.toLowerCase();
+      if (!seen.has(lower)) {
+        seen.add(lower);
+        list.push(active.id);
+      }
+    }
+
+    // If still empty and we have repos loaded, pick first 3 as recent recommendations
+    if (list.length === 0 && repos.length > 0) {
+      for (const r of repos.slice(0, 3)) {
+        list.push(r.id);
+      }
+    }
+
+    return list;
+  }, [recentIds, activeRepos, repos]);
+
   const { items, recentCount } = useMemo(() => {
     const needle = query.trim().toLowerCase();
     const matched = needle
@@ -75,8 +105,12 @@ export function RepoSwitcher() {
         )
       : repos;
 
-    const recentMatches = matched.filter((r) => recentIds.includes(r.id));
-    const otherMatches = matched.filter((r) => !recentIds.includes(r.id));
+    const recentMatches = matched.filter((r) =>
+      effectiveRecentIds.some((id) => id.toLowerCase() === r.id.toLowerCase()),
+    );
+    const otherMatches = matched.filter(
+      (r) => !effectiveRecentIds.some((id) => id.toLowerCase() === r.id.toLowerCase()),
+    );
 
     const allItems: { repo: { owner: string; name: string; id: string }; isRecent: boolean }[] = [
       ...recentMatches.map((repo) => ({ repo, isRecent: true })),
@@ -87,7 +121,7 @@ export function RepoSwitcher() {
       items: allItems,
       recentCount: recentMatches.length,
     };
-  }, [repos, query, recentIds]);
+  }, [repos, query, effectiveRecentIds]);
 
   const enabledCount = items.length;
   const safePos = enabledCount > 0 ? Math.min(activePos, enabledCount - 1) : 0;
