@@ -275,16 +275,9 @@ function LocalCardRow({
       : status === "doing"
         ? "text-blue-500 bg-blue-500/10 border-blue-500/20"
         : "text-amber-500 bg-amber-500/10 border-amber-500/20";
-  const repoScheme = card.repo ? getRepoColorScheme(card.repo) : null;
 
   return (
-    <li className="group relative flex flex-col gap-2 rounded-xl border border-border/80 bg-background/90 p-3 shadow-xs transition-all duration-150 hover:border-primary/50 hover:shadow-md overflow-hidden">
-      {repoScheme && (
-        <span
-          className={cn("absolute left-0 top-0 bottom-0 w-1 rounded-l-lg", repoScheme.bar)}
-          aria-hidden="true"
-        />
-      )}
+    <li className="group relative flex flex-col gap-2 rounded-xl border border-border/80 bg-background/90 p-3 shadow-xs transition-all duration-150 hover:border-primary/50 hover:shadow-md">
       <div className="flex items-start justify-between gap-2">
         <div className="flex items-center gap-1.5 flex-wrap">
           <span className={`inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-[9px] font-semibold tracking-wide uppercase ${statusColor}`}>

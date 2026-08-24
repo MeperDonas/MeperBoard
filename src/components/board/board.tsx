@@ -304,7 +304,6 @@ function BoardCard({
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: card.id,
   });
-  const repoScheme = card.repo ? getRepoColorScheme(card.repo) : null;
 
   return (
     <motion.li
@@ -316,17 +315,11 @@ function BoardCard({
       {...listeners}
       {...attributes}
       className={cn(
-        "group relative cursor-grab rounded-lg border bg-elevated p-3 text-card-foreground shadow-xs transition-all duration-200 ease-out select-none active:cursor-grabbing overflow-hidden",
+        "group relative cursor-grab shrink-0 rounded-lg border bg-elevated p-3 text-card-foreground shadow-xs transition-all duration-200 ease-out select-none active:cursor-grabbing",
         "hover:-translate-y-0.5 hover:shadow-lg hover:shadow-primary/5 hover:border-primary/50 hover:bg-elevated/90",
         isDragging && "opacity-25 border-dashed border-primary scale-[0.98] shadow-inner",
       )}
     >
-      {repoScheme && (
-        <span
-          className={cn("absolute left-0 top-0 bottom-0 w-1 rounded-l-lg", repoScheme.bar)}
-          aria-hidden="true"
-        />
-      )}
       <motion.div
         animate={dipping ? { scale: FLIGHT_DIP_KEYFRAMES } : { scale: 1 }}
         transition={SPRING_CARD_FLIGHT}
@@ -374,7 +367,6 @@ function BoardCard({
 }
 
 function GhostCard({ card, reduceMotion }: { card: Card; reduceMotion: boolean }) {
-  const repoScheme = card.repo ? getRepoColorScheme(card.repo) : null;
   return (
     <motion.div
       aria-hidden="true"
@@ -384,14 +376,8 @@ function GhostCard({ card, reduceMotion }: { card: Card; reduceMotion: boolean }
         rotate: reduceMotion ? 0 : 2.5,
       }}
       transition={reduceMotion ? { duration: 0 } : SPRING_GHOST_LIFT}
-      className="relative w-72 cursor-grabbing rounded-lg border-2 border-primary bg-elevated/95 p-3.5 text-card-foreground shadow-2xl shadow-primary/25 backdrop-blur-xl ring-2 ring-primary/50 overflow-hidden"
+      className="relative w-72 cursor-grabbing rounded-lg border-2 border-primary bg-elevated/95 p-3.5 text-card-foreground shadow-2xl shadow-primary/25 backdrop-blur-xl ring-2 ring-primary/50"
     >
-      {repoScheme && (
-        <span
-          className={cn("absolute left-0 top-0 bottom-0 w-1.5 rounded-l-lg", repoScheme.bar)}
-          aria-hidden="true"
-        />
-      )}
       <div className="flex items-start gap-2.5">
         <span className="mt-0.5 shrink-0 text-primary">
           <GripVertical className="h-4 w-4" />
