@@ -21,7 +21,7 @@ import {
 import type { LocalStatus } from "../../domain/columns";
 import { localStatusStrategy } from "../../domain/columns";
 import { cn } from "../../lib/utils";
-import { useLocalCards } from "../../state";
+import { useActiveRepos, useLocalCards } from "../../state";
 import { MarkdownContent } from "../ui/MarkdownContent";
 import { Button } from "../ui/button";
 import { Portal } from "../ui/portal";
@@ -51,6 +51,7 @@ const MODAL_SPRING = { type: "spring", stiffness: 380, damping: 28 } as const;
  * Features:
  * - Glassmorphic backdrop with ambient primary glow.
  * - Interactive status pill selector with color cues.
+ * - Project / Repository association selector.
  * - Tabbed Markdown editor (Write / Preview).
  * - Keyboard shortcuts: `Ctrl+Enter` / `⌘+Enter` to submit, `Esc` to cancel.
  * - Listen for global `OPEN_CREATE_LOCAL_CARD_EVENT` to open from anywhere.
@@ -64,17 +65,25 @@ export function CreateCardModal({
 }: CreateCardModalProps) {
   const reduceMotion = useReducedMotion() ?? false;
   const { create } = useLocalCards();
+  const activeReposQuery = useActiveRepos();
+  const activeRepos = activeReposQuery.data ?? [];
 
   const [isOpen, setIsOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [status, setStatus] = useState<LocalStatus>(defaultStatus);
+  const [selectedRepo, setSelectedRepo] = useState<string>("none");
   const [activeTab, setActiveTab] = useState<"write" | "preview">("write");
 
   const titleInputRef = useRef<HTMLInputElement | null>(null);
 
   const isControlled = controlledOpen !== undefined;
   const open = isControlled ? controlledOpen : isOpen;
+
+  const repoOptions = [
+    { value: "none", label: "None (Global / Workspace)" },
+    ...activeRepos.map((r) => ({ value: r.id, label: r.id })),
+  ];
 
   function handleClose() {
     isAnyModalOpen = false;
@@ -90,16 +99,21 @@ export function CreateCardModal({
     function handleOpenEvent(event: Event) {
       if (isAnyModalOpen) return;
       isAnyModalOpen = true;
-      const customEvent = event as CustomEvent<{ status?: LocalStatus }>;
+      const customEvent = event as CustomEvent<{ status?: LocalStatus; repo?: string }>;
       if (customEvent.detail?.status) {
         setStatus(customEvent.detail.status);
+      }
+      if (customEvent.detail?.repo) {
+        setSelectedRepo(customEvent.detail.repo);
+      } else if (activeRepos.length === 1 && activeRepos[0]) {
+        setSelectedRepo(activeRepos[0].id);
       }
       setIsOpen(true);
       setActiveTab("write");
     }
     window.addEventListener(OPEN_CREATE_LOCAL_CARD_EVENT, handleOpenEvent);
     return () => window.removeEventListener(OPEN_CREATE_LOCAL_CARD_EVENT, handleOpenEvent);
-  }, []);
+  }, [activeRepos]);
 
   // Autofocus title on open and reset state
   useEffect(() => {
@@ -107,12 +121,17 @@ export function CreateCardModal({
       setTitle("");
       setBody("");
       setStatus(defaultStatus);
+      if (activeRepos.length === 1 && activeRepos[0]) {
+        setSelectedRepo(activeRepos[0].id);
+      } else {
+        setSelectedRepo("none");
+      }
       setActiveTab("write");
       setTimeout(() => {
         titleInputRef.current?.focus();
       }, 50);
     }
-  }, [open, defaultStatus]);
+  }, [open, defaultStatus, activeRepos]);
 
   // Window Escape key listener
   useEffect(() => {
@@ -135,6 +154,7 @@ export function CreateCardModal({
       title: trimmedTitle,
       body: body.trim(),
       status,
+      repo: selectedRepo === "none" ? null : selectedRepo,
     });
 
     handleClose();
@@ -256,6 +276,24 @@ export function CreateCardModal({
                   );
                 })}
               </div>
+            </div>
+
+            {/* Project / Repository Association */}
+            <div>
+              <label
+                htmlFor="local-card-repo-select"
+                className="mb-1.5 block text-xs font-semibold text-muted-foreground uppercase tracking-wider"
+              >
+                Associated Project / Repository
+              </label>
+              <Select
+                id="local-card-repo-select"
+                aria-label="Associated repository"
+                options={repoOptions}
+                value={selectedRepo}
+                onValueChange={setSelectedRepo}
+                className="w-full"
+              />
             </div>
 
             {/* Title Input */}

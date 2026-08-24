@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
 
 import { localItemRepo } from "../data/repositories";
-import type { LocalItem } from "../data/types";
+import type { LocalItem, RepoId } from "../data/types";
 import { localStatusStrategy, type LocalStatus } from "../domain/columns";
 import { queryKeys } from "./query-keys";
 
@@ -10,6 +10,7 @@ export interface LocalCardInput {
   body?: string;
   labels?: string[];
   status?: LocalStatus;
+  repo?: RepoId | null;
 }
 
 export interface LocalCardsOptions {
@@ -68,6 +69,7 @@ async function createLocalCard(
     column_id: columnId,
     position: nextPosition,
     epic_id: null,
+    repo: input.repo ?? null,
     created_at: (options.now ?? defaultNow)(),
   };
   await localItemRepo.upsert(item);

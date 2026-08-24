@@ -96,7 +96,7 @@ function localToCard(item: LocalItem): Card {
     columnId: item.column_id,
     naturalColumnId: item.column_id,
     isManualOverride: false,
-    repo: null,
+    repo: item.repo ?? null,
     number: null,
     state: null,
     htmlUrl: null,

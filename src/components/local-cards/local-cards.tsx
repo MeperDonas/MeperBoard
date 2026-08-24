@@ -16,10 +16,12 @@ import { useMemo, useState, type FormEvent, type ReactNode } from "react";
 import type { LocalItem } from "../../data/types";
 import type { LocalStatus } from "../../domain/columns";
 import { localStatusStrategy } from "../../domain/columns";
+import { getRepoColorScheme } from "../../lib/repo-colors";
 import { cn } from "../../lib/utils";
-import { useLocalCards } from "../../state";
+import { useActiveRepos, useLocalCards } from "../../state";
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
+import { CardRepoBadge } from "../ui/card-meta";
 import { Input } from "../ui/input";
 import { Select } from "../ui/select";
 import { CreateCardModal, OPEN_CREATE_LOCAL_CARD_EVENT } from "./create-card-modal";
@@ -54,10 +56,17 @@ interface LocalCardsProps {
  */
 export function LocalCards({ onClose }: LocalCardsProps) {
   const { list, update, remove } = useLocalCards();
+  const activeReposQuery = useActiveRepos();
+  const activeRepos = activeReposQuery.data ?? [];
   const [editingId, setEditingId] = useState<string | null>(null);
   const [selectedFilter, setSelectedFilter] = useState<"all" | LocalStatus>("all");
 
   const cards = list.data ?? [];
+
+  const repoOptions = useMemo(() => [
+    { value: "none", label: "None (Global / Workspace)" },
+    ...activeRepos.map((r) => ({ value: r.id, label: r.id })),
+  ], [activeRepos]);
 
   const counts = useMemo(() => {
     return {
@@ -221,6 +230,7 @@ export function LocalCards({ onClose }: LocalCardsProps) {
                 <LocalCardEditForm
                   key={card.id}
                   card={card}
+                  repoOptions={repoOptions}
                   onSave={(next) => handleSave(card.id, next)}
                   onCancel={() => setEditingId(null)}
                 />
@@ -265,11 +275,18 @@ function LocalCardRow({
       : status === "doing"
         ? "text-blue-500 bg-blue-500/10 border-blue-500/20"
         : "text-amber-500 bg-amber-500/10 border-amber-500/20";
+  const repoScheme = card.repo ? getRepoColorScheme(card.repo) : null;
 
   return (
-    <li className="group relative flex flex-col gap-2 rounded-xl border border-border/80 bg-background/90 p-3 shadow-xs transition-all duration-150 hover:border-primary/50 hover:shadow-md">
+    <li className="group relative flex flex-col gap-2 rounded-xl border border-border/80 bg-background/90 p-3 shadow-xs transition-all duration-150 hover:border-primary/50 hover:shadow-md overflow-hidden">
+      {repoScheme && (
+        <span
+          className={cn("absolute left-0 top-0 bottom-0 w-1 rounded-l-lg", repoScheme.bar)}
+          aria-hidden="true"
+        />
+      )}
       <div className="flex items-start justify-between gap-2">
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1.5 flex-wrap">
           <span className={`inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-[9px] font-semibold tracking-wide uppercase ${statusColor}`}>
             <span className="h-1.5 w-1.5 rounded-full bg-current" />
             {STATUS_LABEL[status]}
@@ -277,6 +294,7 @@ function LocalCardRow({
           <span className="rounded bg-primary/10 px-1.5 py-0.5 font-mono text-[9px] font-medium text-primary">
             local
           </span>
+          {card.repo && <CardRepoBadge repo={card.repo} />}
         </div>
 
         <div className="flex items-center gap-1 opacity-90 transition-opacity">
@@ -323,14 +341,17 @@ function LocalCardEditForm({
   card,
   onSave,
   onCancel,
+  repoOptions = [],
 }: {
   card: LocalItem;
   onSave: (next: LocalItem) => void;
   onCancel: () => void;
+  repoOptions?: { value: string; label: string }[];
 }) {
   const [title, setTitle] = useState(card.title);
   const [body, setBody] = useState(card.body);
   const [status, setStatus] = useState<LocalStatus>(statusForColumn(card.column_id));
+  const [repo, setRepo] = useState<string>(card.repo ?? "none");
 
   function handleSubmit(event: FormEvent) {
     event.preventDefault();
@@ -341,6 +362,7 @@ function LocalCardEditForm({
       title: trimmed,
       body: body.trim(),
       column_id: localStatusStrategy.columnFor(status),
+      repo: repo === "none" ? null : repo,
     });
   }
 
@@ -364,6 +386,20 @@ function LocalCardEditForm({
           rows={2}
           className="w-full rounded-lg border bg-card px-2.5 py-1.5 text-xs text-foreground shadow-xs transition-colors duration-150 placeholder:text-muted-foreground/70 hover:border-foreground/20 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring resize-none"
         />
+        {repoOptions.length > 0 && (
+          <div className="flex flex-col gap-1">
+            <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+              Project / Repo
+            </label>
+            <Select
+              aria-label="Edit card repository"
+              options={repoOptions}
+              value={repo}
+              onValueChange={setRepo}
+              className="w-full text-xs h-7"
+            />
+          </div>
+        )}
         <div className="flex items-center justify-between gap-2 pt-1 border-t border-border/50">
           <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
             <Select

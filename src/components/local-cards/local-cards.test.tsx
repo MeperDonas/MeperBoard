@@ -149,4 +149,19 @@ describe("LocalCards", () => {
     await waitFor(() => expect(screen.queryByText("Buy milk")).not.toBeInTheDocument());
     expect(await localItemRepo.getAll()).toHaveLength(0);
   });
+
+  it("renders a repository badge when a local card is associated with a repo", async () => {
+    await localItemRepo.upsert(
+      makeLocalItem({
+        id: "l1",
+        title: "Setup Redis cache",
+        repo: "MeperDonas/MeperBoard",
+      }),
+    );
+
+    renderLocalCards();
+
+    await waitFor(() => expect(screen.getByText("Setup Redis cache")).toBeInTheDocument());
+    expect(screen.getByText("MeperBoard")).toBeInTheDocument();
+  });
 });

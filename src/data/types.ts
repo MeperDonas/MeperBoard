@@ -54,6 +54,7 @@ export interface LocalItem {
   column_id: string;
   position: number;
   epic_id: string | null;
+  repo?: RepoId | null;
   created_at: string;
 }
 

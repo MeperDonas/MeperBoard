@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 
 import { cn } from "../../lib/utils";
 import { formatRelativeShort } from "../../lib/relative-date";
+import { getRepoColorScheme, getRepoShortName } from "../../lib/repo-colors";
 import { Badge } from "./badge";
 
 /**
@@ -52,6 +53,27 @@ export function CardSourceKindBadge({ type }: { type: CardMetaInfo["type"] }) {
       className="h-3 w-3 shrink-0 text-primary/70 transition-colors group-hover:text-primary"
       aria-hidden="true"
     />
+  );
+}
+
+/**
+ * Distinctive repository badge with colored indicator dot and custom scheme.
+ */
+export function CardRepoBadge({ repo }: { repo?: string | null }) {
+  if (!repo) return null;
+  const scheme = getRepoColorScheme(repo);
+  const shortName = getRepoShortName(repo);
+  return (
+    <span
+      title={repo}
+      className={cn(
+        "inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 font-mono text-[10px] font-semibold border shadow-2xs transition-colors",
+        scheme.badge,
+      )}
+    >
+      <span className="h-1.5 w-1.5 rounded-full shrink-0" style={{ backgroundColor: scheme.dot }} />
+      <span className="truncate max-w-28">{shortName}</span>
+    </span>
   );
 }
 
@@ -107,7 +129,6 @@ export function CardMetaRow({
 }) {
   const kindLabel =
     card.type === "local" || !KIND_META[card.type] ? null : KIND_META[card.type].label;
-  const repoName = card.repo ? card.repo.split("/")[1] ?? card.repo : null;
 
   return (
     <>
@@ -118,14 +139,7 @@ export function CardMetaRow({
           <span className="truncate text-xs text-muted-foreground">{kindLabel}</span>
         )}
       </span>
-      {repoName && (
-        <span
-          title={card.repo ?? undefined}
-          className="truncate font-mono text-[10px] text-muted-foreground/80 bg-muted/40 px-1 py-0.2 rounded border border-border/40"
-        >
-          {repoName}
-        </span>
-      )}
+      <CardRepoBadge repo={card.repo} />
       <CardStateBadge state={card.state} />
       {trailing}
       <CardRelativeDate iso={card.updatedAt} className="ml-auto" />

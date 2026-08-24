@@ -41,6 +41,31 @@ describe("useLocalCards", () => {
     expect(stored[0]).toMatchObject({ id: "l-1", title: "Buy milk", column_id: "in-progress" });
   });
 
+  it("creates a local card associated with a repository", async () => {
+    const { result } = renderHook(() => useLocalCards({ idFactory: () => "l-2" }), {
+      wrapper: queryWrapper(client),
+    });
+
+    await waitFor(() => expect(result.current.list.isSuccess).toBe(true));
+
+    await act(async () => {
+      await result.current.create.mutateAsync({
+        title: "Database index optimization",
+        status: "todo",
+        repo: "MeperDonas/MeperBoard",
+      });
+    });
+
+    const stored = await localItemRepo.getAll();
+    expect(stored).toHaveLength(1);
+    expect(stored[0]).toMatchObject({
+      id: "l-2",
+      title: "Database index optimization",
+      column_id: "todo",
+      repo: "MeperDonas/MeperBoard",
+    });
+  });
+
   it("edits an existing card in place", async () => {
     await localItemRepo.upsert(makeLocalItem({ id: "l1", title: "Old" }));
 
