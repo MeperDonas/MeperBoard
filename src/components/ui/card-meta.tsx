@@ -67,12 +67,12 @@ export function CardRepoBadge({ repo }: { repo?: string | null }) {
     <span
       title={repo}
       className={cn(
-        "inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 font-mono text-[10px] font-semibold border shadow-2xs transition-colors",
+        "inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 font-mono text-[10px] font-semibold border shadow-2xs transition-colors shrink-0",
         scheme.badge,
       )}
     >
       <span className="h-1.5 w-1.5 rounded-full shrink-0" style={{ backgroundColor: scheme.dot }} />
-      <span className="truncate max-w-28">{shortName}</span>
+      <span>{shortName}</span>
     </span>
   );
 }
@@ -93,7 +93,14 @@ export function CardNumberText({ number }: { number: number | null }) {
 /** State chip: Open renders green via text-success, anything else muted. */
 export function CardStateBadge({ state }: { state: string | null }) {
   if (state == null) return null;
-  return <Badge variant={state === "open" ? "success" : "neutral"}>{formatState(state)}</Badge>;
+  return (
+    <Badge
+      variant={state === "open" ? "success" : "neutral"}
+      className="shrink-0 text-[10px] px-1.5 py-0.2 font-medium"
+    >
+      {formatState(state)}
+    </Badge>
+  );
 }
 
 /** Compact relative date ("3d") with the full timestamp as tooltip. */
@@ -133,10 +140,10 @@ export function CardMetaRow({
   return (
     <>
       <CardSourceKindBadge type={card.type} />
-      <span className="flex min-w-0 items-center gap-1">
+      <span className="inline-flex items-center gap-1 shrink-0">
         <CardNumberText number={card.number} />
         {kindLabel != null && (
-          <span className="truncate text-xs text-muted-foreground">{kindLabel}</span>
+          <span className="text-xs text-muted-foreground">{kindLabel}</span>
         )}
       </span>
       <CardRepoBadge repo={card.repo} />

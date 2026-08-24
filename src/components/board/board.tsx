@@ -15,7 +15,6 @@ import { LayoutGroup, motion, useReducedMotion } from "framer-motion";
 import {
   AlertCircle,
   AlertTriangle,
-  GripVertical,
   Inbox,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
@@ -315,8 +314,8 @@ function BoardCard({
       {...listeners}
       {...attributes}
       className={cn(
-        "group relative cursor-grab shrink-0 rounded-lg border bg-elevated p-3 text-card-foreground shadow-xs transition-all duration-200 ease-out select-none active:cursor-grabbing",
-        "hover:-translate-y-0.5 hover:shadow-lg hover:shadow-primary/5 hover:border-primary/50 hover:bg-elevated/90",
+        "group relative cursor-grab shrink-0 rounded-xl border bg-elevated p-3 text-card-foreground shadow-xs transition-all duration-200 ease-out select-none active:cursor-grabbing",
+        "hover:-translate-y-0.5 hover:shadow-lg hover:shadow-primary/5 hover:border-primary/40 hover:bg-elevated/95",
         isDragging && "opacity-25 border-dashed border-primary scale-[0.98] shadow-inner",
       )}
     >
@@ -324,43 +323,35 @@ function BoardCard({
         animate={dipping ? { scale: FLIGHT_DIP_KEYFRAMES } : { scale: 1 }}
         transition={SPRING_CARD_FLIGHT}
         style={{ transformOrigin: "center top" }}
+        className="w-full cursor-pointer"
+        onClick={() => {
+          if (!isDragging) {
+            onSelect?.();
+          }
+        }}
       >
-        <div className="flex items-start gap-2.5">
-          <span
-            aria-hidden="true"
-            className="mt-0.5 shrink-0 text-muted-foreground/50 transition-colors duration-150 group-hover:text-primary"
-          >
-            <GripVertical className="h-4 w-4" />
-          </span>
-
-          <div
-            className="min-w-0 flex-1 cursor-pointer"
-            onClick={(e) => {
-              if (!isDragging) {
-                onSelect?.();
-              }
-            }}
-          >
-            <p
-              className="text-sm font-medium leading-snug tracking-tight text-foreground transition-colors duration-150 group-hover:text-primary"
-              title={card.title}
-            >
-              {card.title}
-            </p>
-            <div className="mt-2 flex w-full items-center gap-2">
-              <CardMetaRow card={card} />
-            </div>
-            {card.labels.length > 0 && (
-              <div className="mt-2 flex flex-wrap items-center gap-1">
-                {card.labels.map((label) => (
-                  <Badge key={label} variant="outline" className="transition-colors group-hover:border-primary/40 group-hover:text-primary">
-                    {label}
-                  </Badge>
-                ))}
-              </div>
-            )}
-          </div>
+        <p
+          className="text-sm font-medium leading-snug tracking-tight text-foreground transition-colors duration-150 group-hover:text-primary break-words"
+          title={card.title}
+        >
+          {card.title}
+        </p>
+        <div className="mt-1.5 flex w-full flex-wrap items-center gap-1.5">
+          <CardMetaRow card={card} />
         </div>
+        {card.labels.length > 0 && (
+          <div className="mt-2 flex flex-wrap items-center gap-1">
+            {card.labels.map((label) => (
+              <Badge
+                key={label}
+                variant="outline"
+                className="text-[10px] px-1.5 py-0.5 transition-colors group-hover:border-primary/40 group-hover:text-primary"
+              >
+                {label}
+              </Badge>
+            ))}
+          </div>
+        )}
       </motion.div>
     </motion.li>
   );
@@ -376,28 +367,23 @@ function GhostCard({ card, reduceMotion }: { card: Card; reduceMotion: boolean }
         rotate: reduceMotion ? 0 : 2.5,
       }}
       transition={reduceMotion ? { duration: 0 } : SPRING_GHOST_LIFT}
-      className="relative w-72 cursor-grabbing rounded-lg border-2 border-primary bg-elevated/95 p-3.5 text-card-foreground shadow-2xl shadow-primary/25 backdrop-blur-xl ring-2 ring-primary/50"
+      className="relative w-72 cursor-grabbing rounded-xl border-2 border-primary bg-elevated/95 p-3 text-card-foreground shadow-2xl shadow-primary/25 backdrop-blur-xl ring-2 ring-primary/50"
     >
-      <div className="flex items-start gap-2.5">
-        <span className="mt-0.5 shrink-0 text-primary">
-          <GripVertical className="h-4 w-4" />
-        </span>
-        <div className="min-w-0 flex-1">
-          <p className="text-sm font-medium leading-snug tracking-tight text-primary">{card.title}</p>
-          <div className="mt-2 flex w-full items-center gap-2">
-            <CardMetaRow card={card} />
-          </div>
-          {card.labels.length > 0 && (
-            <div className="mt-2 flex flex-wrap items-center gap-1">
-              {card.labels.map((label) => (
-                <Badge key={label} variant="accent">
-                  {label}
-                </Badge>
-              ))}
-            </div>
-          )}
-        </div>
+      <p className="text-sm font-medium leading-snug tracking-tight text-primary break-words">
+        {card.title}
+      </p>
+      <div className="mt-1.5 flex w-full flex-wrap items-center gap-1.5">
+        <CardMetaRow card={card} />
       </div>
+      {card.labels.length > 0 && (
+        <div className="mt-2 flex flex-wrap items-center gap-1">
+          {card.labels.map((label) => (
+            <Badge key={label} variant="accent" className="text-[10px] px-1.5 py-0.5">
+              {label}
+            </Badge>
+          ))}
+        </div>
+      )}
     </motion.div>
   );
 }
