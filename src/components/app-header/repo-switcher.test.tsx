@@ -141,4 +141,20 @@ describe("RepoSwitcher", () => {
 
     expect(await screen.findByText(/failed to load repositories/i)).toBeInTheDocument();
   });
+
+  it("renders a Recent section when recent repositories exist in storage", async () => {
+    window.localStorage.setItem(
+      "meperboard:recent-repos",
+      JSON.stringify(["meperdonas/meperboard"]),
+    );
+    mockFetch({ "/api/github/user/repos": () => jsonResponse(liveRepos) });
+
+    render(<RepoSwitcher />, { wrapper: queryWrapper(client) });
+    openSwitcher();
+
+    await waitFor(() =>
+      expect(screen.getByText("Recent")).toBeInTheDocument(),
+    );
+    expect(screen.getByText("All Repositories")).toBeInTheDocument();
+  });
 });

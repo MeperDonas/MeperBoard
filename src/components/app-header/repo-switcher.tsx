@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, useReducedMotion } from "framer-motion";
-import { Check, Database, FolderGit2, Loader2, X } from "lucide-react";
+import { Check, Clock, Database, FolderGit2, Loader2, X } from "lucide-react";
 import {
   useEffect,
   useId,
@@ -11,6 +11,8 @@ import {
   type KeyboardEvent as ReactKeyboardEvent,
 } from "react";
 
+import { loadRecentRepos, saveRecentRepo } from "../../lib/recent-repos";
+import { getRepoColorScheme } from "../../lib/repo-colors";
 import { cn } from "../../lib/utils";
 import { useActiveRepos, useToggleActiveRepo, useUserRepos } from "../../state";
 import { Portal } from "../ui/portal";
@@ -23,7 +25,8 @@ const PANEL_SPRING = { type: "spring", stiffness: 400, damping: 30 } as const;
 /**
  * Combobox repository switcher. Lists the user's repositories LIVE from GitHub
  * via the read-only proxy (`GET /user/repos`) — never from a cookie snapshot
- * (AUTH_PLAN v2.1 §0.1). Fuzzy search over `owner/name`, keyboard navigation
+ * (AUTH_PLAN v2.1 §0.1). Shows a "Recent" section first, followed by all repositories.
+ * Fuzzy search over `owner/name`, keyboard navigation
  * (arrows/Home/End/Enter/Escape), and multi-select toggles active repositories
  * through `repoRepo` and invalidates board/backlog/detail reads.
  */
@@ -32,6 +35,7 @@ export function RepoSwitcher() {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [activePos, setActivePos] = useState(0);
+  const [recentIds, setRecentIds] = useState<string[]>([]);
   const inputRef = useRef<HTMLInputElement | null>(null);
   const openRef = useRef(open);
   const uid = useId();
@@ -56,20 +60,36 @@ export function RepoSwitcher() {
       setOpen(true);
       setQuery("");
       setActivePos(0);
+      setRecentIds(loadRecentRepos());
     }
     window.addEventListener(OPEN_REPO_SWITCHER_EVENT, onOpen);
     return () => window.removeEventListener(OPEN_REPO_SWITCHER_EVENT, onOpen);
   }, []);
 
-  const filtered = useMemo<{ owner: string; name: string; id: string }[]>(() => {
+  const { items, recentCount } = useMemo(() => {
     const needle = query.trim().toLowerCase();
-    if (!needle) return repos;
-    return repos.filter(
-      (repo) => repo.id.toLowerCase().includes(needle) || repo.name.toLowerCase().includes(needle),
-    );
-  }, [repos, query]);
+    const matched = needle
+      ? repos.filter(
+          (repo) =>
+            repo.id.toLowerCase().includes(needle) || repo.name.toLowerCase().includes(needle),
+        )
+      : repos;
 
-  const enabledCount = filtered.length;
+    const recentMatches = matched.filter((r) => recentIds.includes(r.id));
+    const otherMatches = matched.filter((r) => !recentIds.includes(r.id));
+
+    const allItems: { repo: { owner: string; name: string; id: string }; isRecent: boolean }[] = [
+      ...recentMatches.map((repo) => ({ repo, isRecent: true })),
+      ...otherMatches.map((repo) => ({ repo, isRecent: false })),
+    ];
+
+    return {
+      items: allItems,
+      recentCount: recentMatches.length,
+    };
+  }, [repos, query, recentIds]);
+
+  const enabledCount = items.length;
   const safePos = enabledCount > 0 ? Math.min(activePos, enabledCount - 1) : 0;
   const activeIndex = safePos;
 
@@ -79,10 +99,13 @@ export function RepoSwitcher() {
   const activeIndexRef = useRef(activeIndex);
   activeIndexRef.current = activeIndex;
 
-  const filteredRef = useRef(filtered);
-  filteredRef.current = filtered;
+  const itemsRef = useRef(items);
+  itemsRef.current = items;
 
   function toggleRepo(owner: string, name: string) {
+    const repoId = `${owner}/${name}`;
+    saveRecentRepo(repoId);
+    setRecentIds(loadRecentRepos());
     toggleActive.mutate({ owner, name });
   }
 
@@ -119,10 +142,10 @@ export function RepoSwitcher() {
       } else if (event.key === "Enter") {
         event.preventDefault();
         const idx = activeIndexRef.current;
-        const list = filteredRef.current;
-        const repo = list[idx];
-        if (repo) {
-          toggleRepo(repo.owner, repo.name);
+        const list = itemsRef.current;
+        const item = list[idx];
+        if (item) {
+          toggleRepo(item.repo.owner, item.repo.name);
         }
       }
     }
@@ -236,55 +259,79 @@ export function RepoSwitcher() {
                   <div className="px-2 py-8 text-center text-sm text-destructive">
                     Failed to load repositories.
                   </div>
-                ) : reposQuery.isSuccess && filtered.length === 0 ? (
+                ) : reposQuery.isSuccess && items.length === 0 ? (
                   <div className="px-2 py-8 text-center text-sm text-muted-foreground">
                     {query ? `No repositories match “${query}”` : "No repositories found"}
                   </div>
                 ) : (
                   <div className="flex flex-col gap-0.5">
-                    {filtered.map((repo, index) => {
+                    {items.map((item, index) => {
+                      const { repo, isRecent } = item;
+                      const isFirstRecent = isRecent && index === 0;
+                      const isFirstOther = !isRecent && index === recentCount && recentCount > 0;
                       const isActive = index === activeIndex;
                       const isSelected = activeRepoIds.has(repo.id);
+                      const scheme = getRepoColorScheme(repo.id);
+
                       return (
-                        <div
-                          key={repo.id}
-                          id={`${listboxId}-option-${index}`}
-                          role="option"
-                          aria-selected={isSelected}
-                          data-active={isActive}
-                          onMouseMove={(event) => {
-                            if (event.movementX === 0 && event.movementY === 0) return;
-                            setActivePos(index);
-                          }}
-                          onClick={() => toggleRepo(repo.owner, repo.name)}
-                          className={cn(
-                            "group flex cursor-pointer items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm transition-colors duration-100",
-                            isActive
-                              ? "bg-accent text-accent-foreground ring-1 ring-primary/30"
-                              : "text-foreground hover:bg-accent/50",
-                            isSelected && "text-primary font-medium",
+                        <div key={repo.id} className="flex flex-col gap-0.5">
+                          {isFirstRecent && (
+                            <div className="flex items-center gap-1.5 px-2.5 py-1 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+                              <Clock className="h-3 w-3 text-primary" aria-hidden="true" />
+                              <span>Recent</span>
+                            </div>
                           )}
-                        >
+                          {isFirstOther && (
+                            <div className="flex items-center gap-1.5 px-2.5 pt-2 pb-1 text-[10px] font-bold text-muted-foreground uppercase tracking-wider border-t border-border/40 mt-1">
+                              <FolderGit2 className="h-3 w-3 text-muted-foreground" aria-hidden="true" />
+                              <span>All Repositories</span>
+                            </div>
+                          )}
                           <div
+                            id={`${listboxId}-option-${index}`}
+                            role="option"
+                            aria-selected={isSelected}
+                            data-active={isActive}
+                            onMouseMove={(event) => {
+                              if (event.movementX === 0 && event.movementY === 0) return;
+                              setActivePos(index);
+                            }}
+                            onClick={() => toggleRepo(repo.owner, repo.name)}
                             className={cn(
-                              "flex h-4 w-4 shrink-0 items-center justify-center rounded border transition-colors",
-                              isSelected
-                                ? "border-primary bg-primary text-primary-foreground"
-                                : "border-muted-foreground/40 bg-transparent",
+                              "group flex cursor-pointer items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm transition-colors duration-100",
+                              isActive
+                                ? "bg-accent text-accent-foreground ring-1 ring-primary/30"
+                                : "text-foreground hover:bg-accent/50",
+                              isSelected && "text-primary font-medium",
                             )}
                           >
-                            {isSelected && <Check className="h-3 w-3" aria-hidden="true" />}
+                            <div
+                              className={cn(
+                                "flex h-4 w-4 shrink-0 items-center justify-center rounded border transition-colors",
+                                isSelected
+                                  ? "border-primary bg-primary text-primary-foreground"
+                                  : "border-muted-foreground/40 bg-transparent",
+                              )}
+                            >
+                              {isSelected && <Check className="h-3 w-3" aria-hidden="true" />}
+                            </div>
+                            <span
+                              className="h-2 w-2 rounded-full shrink-0"
+                              style={{ backgroundColor: scheme.dot }}
+                              aria-hidden="true"
+                            />
+                            <span className="min-w-0 flex-1 truncate font-medium">{repo.id}</span>
+                            {isRecent && (
+                              <span className="text-[10px] font-mono text-muted-foreground/80 bg-muted/40 px-1.5 py-0.5 rounded border border-border/40">
+                                recent
+                              </span>
+                            )}
+                            {isActive && (
+                              <span className="ml-auto inline-flex items-center gap-1 rounded bg-background/80 px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground border border-border/60">
+                                <span className="text-[9px]">Toggle</span> ↵
+                              </span>
+                            )}
                           </div>
-                          <FolderGit2
-                            className="h-3.5 w-3.5 shrink-0 text-muted-foreground"
-                            aria-hidden="true"
-                          />
-                          <span className="min-w-0 flex-1 truncate font-medium">{repo.id}</span>
-                          {isActive && (
-                            <span className="ml-auto inline-flex items-center gap-1 rounded bg-background/80 px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground border border-border/60">
-                              <span className="text-[9px]">Toggle</span> ↵
-                            </span>
-                          )}
                         </div>
                       );
                     })}
