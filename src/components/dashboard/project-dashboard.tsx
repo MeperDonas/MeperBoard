@@ -7,7 +7,9 @@ import {
   AlertTriangle,
   AlignLeft,
   CheckCircle2,
+  ChevronDown,
   Clock,
+  ExternalLink,
   LayoutGrid,
   Plus,
   Search,
@@ -15,12 +17,12 @@ import {
   Sparkles,
   X,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useMemo, useState } from "react";
 
-import { computeProjectMetrics, type ProjectMetrics } from "../../domain/metrics";
+import { computeProjectMetrics, isCriticalCard, type ProjectMetrics } from "../../domain/metrics";
 import { cn } from "../../lib/utils";
+import { useActiveRepo } from "../../state/use-repos";
 import type { Card } from "../../state/cards";
-import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
 import { OPEN_CREATE_LOCAL_CARD_EVENT } from "../local-cards";
 
@@ -48,10 +50,24 @@ export function ProjectDashboard({
   className,
 }: ProjectDashboardProps) {
   const pathname = usePathname();
+  const activeRepo = useActiveRepo();
   const [showFilterMenu, setShowFilterMenu] = useState(false);
+  const [showCreateMenu, setShowCreateMenu] = useState(false);
+
   const metrics: ProjectMetrics = computeProjectMetrics(cards);
 
-  function handleCreateClick() {
+  const filterCounts = useMemo(() => {
+    return {
+      all: cards.length,
+      issue: cards.filter((c) => c.type === "issue").length,
+      pull: cards.filter((c) => c.type === "pull").length,
+      local: cards.filter((c) => c.type === "local").length,
+      critical: cards.filter((c) => isCriticalCard(c)).length,
+    };
+  }, [cards]);
+
+  function handleCreateLocal() {
+    setShowCreateMenu(false);
     if (onOpenCreate) {
       onOpenCreate();
     } else {
@@ -59,10 +75,20 @@ export function ProjectDashboard({
     }
   }
 
+  function handleOpenGitHubIssue() {
+    setShowCreateMenu(false);
+    const repoId = activeRepo.data?.id;
+    if (repoId) {
+      window.open(`https://github.com/${repoId}/issues/new`, "_blank", "noopener,noreferrer");
+    } else {
+      handleCreateLocal();
+    }
+  }
+
   return (
     <header
       className={cn(
-        "flex flex-col gap-3.5 border-b border-border/70 bg-card/25 px-4 py-3.5 backdrop-blur-md md:px-6",
+        "relative z-30 flex flex-col gap-3.5 border-b border-border/70 bg-card/25 px-4 py-3.5 backdrop-blur-md md:px-6",
         className,
       )}
       role="region"
@@ -217,37 +243,56 @@ export function ProjectDashboard({
               )}
             </Button>
 
-            {/* Filter Menu Popup */}
+            {/* Filter Menu Popup with backdrop */}
             {showFilterMenu && (
-              <div className="absolute right-0 top-full z-30 mt-1.5 w-44 rounded-xl border border-border/80 bg-popover/95 p-1 shadow-xl backdrop-blur-xl">
-                {(
-                  [
-                    { id: "all", label: "All Items" },
-                    { id: "issue", label: "Issues Only" },
-                    { id: "pull", label: "PRs Only" },
-                    { id: "local", label: "Local Cards" },
-                    { id: "critical", label: "Critical / Bugs" },
-                  ] as const
-                ).map((f) => (
-                  <button
-                    key={f.id}
-                    type="button"
-                    onClick={() => {
-                      onFilterTypeChange(f.id);
-                      setShowFilterMenu(false);
-                    }}
-                    className={cn(
-                      "flex w-full items-center justify-between rounded-lg px-2.5 py-1.5 text-xs transition-colors",
-                      filterType === f.id
-                        ? "bg-primary text-primary-foreground font-semibold"
-                        : "text-foreground hover:bg-accent",
-                    )}
-                  >
-                    <span>{f.label}</span>
-                    {filterType === f.id && <CheckCircle2 className="h-3 w-3" />}
-                  </button>
-                ))}
-              </div>
+              <>
+                <div
+                  className="fixed inset-0 z-40"
+                  onClick={() => setShowFilterMenu(false)}
+                  aria-hidden="true"
+                />
+                <div className="absolute right-0 top-full z-50 mt-1.5 w-52 rounded-xl border border-border/80 bg-popover/98 p-1.5 shadow-2xl backdrop-blur-2xl ring-1 ring-primary/20">
+                  {(
+                    [
+                      { id: "all", label: "All Items", count: filterCounts.all },
+                      { id: "issue", label: "Issues Only", count: filterCounts.issue },
+                      { id: "pull", label: "PRs Only", count: filterCounts.pull },
+                      { id: "local", label: "Local Cards", count: filterCounts.local },
+                      { id: "critical", label: "Critical / Bugs", count: filterCounts.critical },
+                    ] as const
+                  ).map((f) => (
+                    <button
+                      key={f.id}
+                      type="button"
+                      onClick={() => {
+                        onFilterTypeChange(f.id);
+                        setShowFilterMenu(false);
+                      }}
+                      className={cn(
+                        "flex w-full items-center justify-between rounded-lg px-2.5 py-1.5 text-xs transition-colors",
+                        filterType === f.id
+                          ? "bg-primary text-primary-foreground font-semibold"
+                          : "text-foreground hover:bg-accent",
+                      )}
+                    >
+                      <div className="flex items-center gap-2">
+                        <span>{f.label}</span>
+                        <span
+                          className={cn(
+                            "rounded px-1 text-[10px] font-mono",
+                            filterType === f.id
+                              ? "bg-primary-foreground/20 text-primary-foreground"
+                              : "bg-muted text-muted-foreground",
+                          )}
+                        >
+                          {f.count}
+                        </span>
+                      </div>
+                      {filterType === f.id && <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />}
+                    </button>
+                  ))}
+                </div>
+              </>
             )}
           </div>
 
@@ -286,18 +331,66 @@ export function ProjectDashboard({
             </Link>
           </div>
 
-          {/* CTA: + New Issue / New Card */}
-          <Button
-            type="button"
-            variant="primary"
-            size="sm"
-            onClick={handleCreateClick}
-            aria-label="New card or issue"
-            className="h-8 gap-1.5 rounded-xl px-3 text-xs font-semibold shadow-xs shadow-primary/20"
-          >
-            <Plus className="h-3.5 w-3.5" />
-            <span>New Issue</span>
-          </Button>
+          {/* CTA: Dual Action + New Card / GitHub Issue */}
+          <div className="relative">
+            <div className="inline-flex rounded-xl shadow-xs shadow-primary/20">
+              <Button
+                type="button"
+                variant="primary"
+                size="sm"
+                onClick={handleCreateLocal}
+                aria-label="New card or issue"
+                className="h-8 gap-1.5 rounded-r-none px-3 text-xs font-semibold"
+              >
+                <Plus className="h-3.5 w-3.5" />
+                <span>New Card</span>
+              </Button>
+              <button
+                type="button"
+                onClick={() => setShowCreateMenu((prev) => !prev)}
+                aria-label="More creation options"
+                className="inline-flex h-8 items-center justify-center rounded-r-xl border-l border-primary-foreground/20 bg-primary px-1.5 text-primary-foreground hover:bg-primary-hover focus-visible:outline-none"
+              >
+                <ChevronDown className="h-3.5 w-3.5" />
+              </button>
+            </div>
+
+            {/* Creation Menu Popup */}
+            {showCreateMenu && (
+              <>
+                <div
+                  className="fixed inset-0 z-40"
+                  onClick={() => setShowCreateMenu(false)}
+                  aria-hidden="true"
+                />
+                <div className="absolute right-0 top-full z-50 mt-1.5 w-52 rounded-xl border border-border/80 bg-popover/98 p-1.5 shadow-2xl backdrop-blur-2xl ring-1 ring-primary/20">
+                  <button
+                    type="button"
+                    onClick={handleCreateLocal}
+                    className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-xs text-foreground transition-colors hover:bg-accent"
+                  >
+                    <Sparkles className="h-3.5 w-3.5 text-primary shrink-0" />
+                    <div className="text-left">
+                      <p className="font-semibold text-foreground">Local card</p>
+                      <p className="text-[10px] text-muted-foreground">IndexedDB • Offline</p>
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleOpenGitHubIssue}
+                    className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-xs text-foreground transition-colors hover:bg-accent"
+                  >
+                    <ExternalLink className="h-3.5 w-3.5 text-primary shrink-0" />
+                    <div className="text-left">
+                      <p className="font-semibold text-foreground">GitHub Issue</p>
+                      <p className="text-[10px] text-muted-foreground">Opens on github.com ↗</p>
+                    </div>
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
         </div>
       </div>
     </header>

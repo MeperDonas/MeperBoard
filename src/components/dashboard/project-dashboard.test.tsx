@@ -1,12 +1,27 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
+import { createTestQueryClient, queryWrapper } from "../../state/test-utils";
 import type { Card } from "../../state/cards";
-import { ProjectDashboard } from "./project-dashboard";
+import { ProjectDashboard, type ProjectDashboardProps } from "./project-dashboard";
 
 vi.mock("next/navigation", () => ({
   usePathname: () => "/",
 }));
+
+function renderDashboard(props: Partial<ProjectDashboardProps> & { cards: Card[] }) {
+  const client = createTestQueryClient();
+  return render(
+    <ProjectDashboard
+      searchQuery=""
+      onSearchChange={vi.fn()}
+      filterType="all"
+      onFilterTypeChange={vi.fn()}
+      {...props}
+    />,
+    { wrapper: queryWrapper(client) },
+  );
+}
 
 function makeCard(overrides: Partial<Card> = {}): Card {
   return {
@@ -38,15 +53,7 @@ describe("ProjectDashboard", () => {
   ];
 
   it("renders KPI cards and progress percentage", () => {
-    render(
-      <ProjectDashboard
-        cards={cards}
-        searchQuery=""
-        onSearchChange={vi.fn()}
-        filterType="all"
-        onFilterTypeChange={vi.fn()}
-      />,
-    );
+    renderDashboard({ cards });
 
     expect(screen.getByRole("region", { name: "Project health dashboard" })).toBeInTheDocument();
     expect(screen.getByTestId("kpi-completed")).toHaveTextContent("1/5");
@@ -58,15 +65,7 @@ describe("ProjectDashboard", () => {
 
   it("updates search query when typing", () => {
     const onSearch = vi.fn();
-    render(
-      <ProjectDashboard
-        cards={cards}
-        searchQuery=""
-        onSearchChange={onSearch}
-        filterType="all"
-        onFilterTypeChange={vi.fn()}
-      />,
-    );
+    renderDashboard({ cards, onSearchChange: onSearch });
 
     const input = screen.getByLabelText("Search issues and cards");
     fireEvent.change(input, { target: { value: "Setup" } });
@@ -75,33 +74,16 @@ describe("ProjectDashboard", () => {
 
   it("switches filter types from the filters dropdown", () => {
     const onFilter = vi.fn();
-    render(
-      <ProjectDashboard
-        cards={cards}
-        searchQuery=""
-        onSearchChange={vi.fn()}
-        filterType="all"
-        onFilterTypeChange={onFilter}
-      />,
-    );
+    renderDashboard({ cards, onFilterTypeChange: onFilter });
 
     fireEvent.click(screen.getByRole("button", { name: "Filter cards" }));
-    fireEvent.click(screen.getByRole("button", { name: "PRs Only" }));
+    fireEvent.click(screen.getByRole("button", { name: /PRs Only/i }));
     expect(onFilter).toHaveBeenCalledWith("pull");
   });
 
-  it("triggers creation on New Issue CTA click", () => {
+  it("triggers creation on New Card CTA click", () => {
     const onOpenCreate = vi.fn();
-    render(
-      <ProjectDashboard
-        cards={cards}
-        searchQuery=""
-        onSearchChange={vi.fn()}
-        filterType="all"
-        onFilterTypeChange={vi.fn()}
-        onOpenCreate={onOpenCreate}
-      />,
-    );
+    renderDashboard({ cards, onOpenCreate });
 
     fireEvent.click(screen.getByRole("button", { name: "New card or issue" }));
     expect(onOpenCreate).toHaveBeenCalled();
