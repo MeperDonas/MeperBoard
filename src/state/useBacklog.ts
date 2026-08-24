@@ -9,23 +9,25 @@ import {
   type Card,
 } from "./cards";
 import { queryKeys } from "./query-keys";
-import { useActiveRepo } from "./use-repos";
+import { useActiveRepos } from "./use-repos";
 import { DEFAULT_REPO_ID } from "./useSync";
 
 /**
  * Flat, filterable, sortable list of cards (github + local).
  *
- * The query key includes the active repo id so the `useSetActiveRepo`
+ * The query key includes the active repo ids so the `useToggleActiveRepo` / `useSetActiveRepo`
  * invalidation re-fetches a distinct key after a repo switch, and the read
- * filters `github_items` to the active repo (defaulting to `DEFAULT_REPO_ID`).
+ * filters `github_items` to the active repos (defaulting to `DEFAULT_REPO_ID`).
  * Local cards are always included.
  */
 export function useBacklog(filters: BacklogFilters = {}, sort?: BacklogSort) {
-  const activeRepo = useActiveRepo();
-  const repoId = activeRepo.data?.id ?? DEFAULT_REPO_ID;
+  const activeRepos = useActiveRepos();
+  const repoIds = (activeRepos.data && activeRepos.data.length > 0)
+    ? activeRepos.data.map((r) => r.id).sort()
+    : [DEFAULT_REPO_ID];
 
   return useQuery<Card[]>({
-    queryKey: [...queryKeys.backlog, filters, sort, repoId],
-    queryFn: async () => sortCards(filterCards(await loadCards(repoId), filters), sort),
+    queryKey: [...queryKeys.backlog, filters, sort, ...repoIds],
+    queryFn: async () => sortCards(filterCards(await loadCards(repoIds), filters), sort),
   });
 }

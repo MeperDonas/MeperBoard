@@ -200,4 +200,62 @@ describe("repoRepo", () => {
   it("returns undefined for getActive when no repo was marked", async () => {
     expect(await repoRepo.getActive()).toBeUndefined();
   });
+
+  it("toggleActive activates an inactive repo", async () => {
+    const repo = await repoRepo.toggleActive("acme", "widgets");
+    expect(repo.is_active).toBe(true);
+    const actives = await repoRepo.getActiveRepos();
+    expect(actives).toHaveLength(1);
+    expect(actives[0]).toMatchObject({ id: "acme/widgets", is_active: true });
+  });
+
+  it("toggleActive deactivates an active repo", async () => {
+    await repoRepo.toggleActive("acme", "widgets");
+    const deactivated = await repoRepo.toggleActive("acme", "widgets");
+    expect(deactivated.is_active).toBe(false);
+    const actives = await repoRepo.getActiveRepos();
+    expect(actives).toHaveLength(0);
+  });
+
+  it("multiple repos can be active simultaneously with toggleActive", async () => {
+    await repoRepo.toggleActive("acme", "widgets");
+    await repoRepo.toggleActive("meperdonas", "meperboard");
+    const actives = await repoRepo.getActiveRepos();
+    expect(actives).toHaveLength(2);
+    expect(actives.map((r) => r.id).sort()).toEqual(["acme/widgets", "meperdonas/meperboard"]);
+  });
+
+  it("toggleActive preserves last_sync_at when toggling", async () => {
+    await repoRepo.upsert({
+      id: "acme/widgets",
+      owner: "acme",
+      name: "widgets",
+      last_sync_at: "2026-08-01T00:00:00Z",
+    });
+    const repo = await repoRepo.toggleActive("acme", "widgets");
+    expect(repo.last_sync_at).toBe("2026-08-01T00:00:00Z");
+    expect(repo.is_active).toBe(true);
+  });
 });
+
+describe("githubItemRepo.getAllByRepos", () => {
+  beforeEach(async () => {
+    await db.delete();
+    await db.open();
+  });
+
+  it("returns items from multiple repos", async () => {
+    await githubItemRepo.upsert(githubItem({ repo: "acme/a", number: 1 }));
+    await githubItemRepo.upsert(githubItem({ repo: "acme/b", number: 2 }));
+    await githubItemRepo.upsert(githubItem({ repo: "acme/c", number: 3 }));
+
+    const items = await githubItemRepo.getAllByRepos(["acme/a", "acme/b"]);
+    expect(items).toHaveLength(2);
+    expect(items.map((i) => i.repo).sort()).toEqual(["acme/a", "acme/b"]);
+  });
+
+  it("returns empty array for empty repo list", async () => {
+    expect(await githubItemRepo.getAllByRepos([])).toEqual([]);
+  });
+});
+

@@ -25,8 +25,12 @@ export { useBoard } from "./useBoard";
 export { useBacklog } from "./useBacklog";
 export { useIssueDetail } from "./useIssueDetail";
 export {
+  ACTIVE_REPO_KEY,
+  ACTIVE_REPOS_KEY,
   useActiveRepo,
+  useActiveRepos,
   useSetActiveRepo,
+  useToggleActiveRepo,
   useUserRepos,
   type RepoRef,
 } from "./use-repos";

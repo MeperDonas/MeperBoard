@@ -126,6 +126,37 @@ describe("useSync", () => {
       "https://api.github.com/repos/acme/widgets/issues?state=all&per_page=100",
     );
   });
+
+  it("syncs all active repos sequentially when multiple are active", async () => {
+    await repoRepo.toggleActive("acme", "widgets");
+    await repoRepo.toggleActive("meperdonas", "meperboard");
+
+    const fetcher = vi.fn<(url: string) => Promise<Response>>();
+    fetcher.mockImplementation(() => Promise.resolve(jsonResponse(issuePayloads)));
+    const client = createTestQueryClient();
+
+    function RepoProbe() {
+      const sync = useSync({ fetcher });
+      return (
+        <button data-testid="sync" onClick={() => sync.mutate()}>
+          sync
+        </button>
+      );
+    }
+
+    render(<RepoProbe />, { wrapper: queryWrapper(client) });
+
+    act(() => screen.getByTestId("sync").click());
+
+    await waitFor(() => expect(githubItemRepo.getAll()).resolves.toHaveLength(4));
+
+    expect(fetcher).toHaveBeenCalledWith(
+      "https://api.github.com/repos/acme/widgets/issues?state=all&per_page=100",
+    );
+    expect(fetcher).toHaveBeenCalledWith(
+      "https://api.github.com/repos/meperdonas/meperboard/issues?state=all&per_page=100",
+    );
+  });
 });
 
 function ActiveRepoProbe() {

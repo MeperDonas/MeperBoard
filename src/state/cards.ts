@@ -120,16 +120,17 @@ export function resolveGithubColumn(item: GithubItem): string {
 /**
  * Read all cards (github + local) as a unified projection.
  *
- * GitHub items are filtered to the active repo (`activeRepoId`), defaulting to
- * `DEFAULT_REPO_ID` when no repo has been selected — this is the read-path fix
- * that keeps board/backlog scoped to the chosen repo instead of projecting the
- * whole `github_items` store. Local cards are NOT filtered (they are global to
- * the board and independent of the active repo).
+ * GitHub items are filtered to the active repos (`activeRepoIds`), defaulting to
+ * `DEFAULT_REPO_ID` when no repo has been selected. Local cards are NOT filtered
+ * (they are global to the board and independent of the active repo).
  */
-export async function loadCards(activeRepoId?: RepoId): Promise<Card[]> {
-  const repo = activeRepoId ?? DEFAULT_REPO_ID;
+export async function loadCards(activeRepoIds?: RepoId[] | RepoId): Promise<Card[]> {
+  const repos = Array.isArray(activeRepoIds)
+    ? (activeRepoIds.length > 0 ? activeRepoIds : [DEFAULT_REPO_ID])
+    : (activeRepoIds ? [activeRepoIds] : [DEFAULT_REPO_ID]);
+
   const [githubItems, localItems, overrides] = await Promise.all([
-    githubItemRepo.getAllByRepo(repo),
+    githubItemRepo.getAllByRepos(repos),
     localItemRepo.getAll(),
     githubItemRepo.getAllOverrides(),
   ]);
@@ -171,8 +172,8 @@ export async function loadColumns(): Promise<Column[]> {
 }
 
 /** Full board projection: columns (ordered) + their resolved cards. */
-export async function loadBoard(activeRepoId?: RepoId): Promise<Board> {
-  const [columns, cards] = await Promise.all([loadColumns(), loadCards(activeRepoId)]);
+export async function loadBoard(activeRepoIds?: RepoId[] | RepoId): Promise<Board> {
+  const [columns, cards] = await Promise.all([loadColumns(), loadCards(activeRepoIds)]);
   return buildBoard(columns, cards);
 }
 
@@ -193,14 +194,16 @@ export function buildBoard(columns: Column[], cards: Card[]): Board {
 export interface BacklogFilters {
   label?: string;
   type?: CardType;
+  repo?: RepoId;
 }
 
-/** Filter cards by label and/or type. Empty/undefined filters match all. */
+/** Filter cards by label, type, and/or repo. Empty/undefined filters match all. */
 export function filterCards(cards: Card[], filters: BacklogFilters = {}): Card[] {
-  const { label, type } = filters;
+  const { label, type, repo } = filters;
   return cards.filter((card) => {
     if (type != null && card.type !== type) return false;
     if (label != null && label !== "" && !card.labels.includes(label)) return false;
+    if (repo != null && repo !== "" && card.repo !== repo) return false;
     return true;
   });
 }

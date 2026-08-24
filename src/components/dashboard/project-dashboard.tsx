@@ -21,7 +21,7 @@ import { useMemo, useState } from "react";
 
 import { computeProjectMetrics, isCriticalCard, type ProjectMetrics } from "../../domain/metrics";
 import { cn } from "../../lib/utils";
-import { useActiveRepo } from "../../state/use-repos";
+import { useActiveRepos } from "../../state/use-repos";
 import type { Card } from "../../state/cards";
 import { Button } from "../ui/button";
 import { OPEN_CREATE_LOCAL_CARD_EVENT } from "../local-cards";
@@ -50,7 +50,7 @@ export function ProjectDashboard({
   className,
 }: ProjectDashboardProps) {
   const pathname = usePathname();
-  const activeRepo = useActiveRepo();
+  const activeRepos = useActiveRepos();
   const [showFilterMenu, setShowFilterMenu] = useState(false);
   const [showCreateMenu, setShowCreateMenu] = useState(false);
 
@@ -77,7 +77,7 @@ export function ProjectDashboard({
 
   function handleOpenGitHubIssue() {
     setShowCreateMenu(false);
-    const repoId = activeRepo.data?.id;
+    const repoId = activeRepos.data?.[0]?.id;
     if (repoId) {
       window.open(`https://github.com/${repoId}/issues/new`, "_blank", "noopener,noreferrer");
     } else {

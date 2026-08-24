@@ -12,7 +12,7 @@ import {
 } from "react";
 
 import { cn } from "../../lib/utils";
-import { useActiveRepo, useSetActiveRepo, useUserRepos } from "../../state";
+import { useActiveRepos, useToggleActiveRepo, useUserRepos } from "../../state";
 import { Portal } from "../ui/portal";
 
 /** Cross-component signal the switcher listens for (AuthMenu + CommandPalette). */
@@ -24,12 +24,8 @@ const PANEL_SPRING = { type: "spring", stiffness: 400, damping: 30 } as const;
  * Combobox repository switcher. Lists the user's repositories LIVE from GitHub
  * via the read-only proxy (`GET /user/repos`) — never from a cookie snapshot
  * (AUTH_PLAN v2.1 §0.1). Fuzzy search over `owner/name`, keyboard navigation
- * (arrows/Home/End/Enter/Escape), and selecting a repo persists it as the
- * active repo through `repoRepo` and invalidates board/backlog/detail reads.
- *
- * The panel is lazy: it does not mount or fetch the repo list until
- * `OPEN_REPO_SWITCHER_EVENT` is dispatched (from the auth menu or the ⌘K
- * palette). Follows the select.tsx combobox/listbox a11y pattern.
+ * (arrows/Home/End/Enter/Escape), and multi-select toggles active repositories
+ * through `repoRepo` and invalidates board/backlog/detail reads.
  */
 export function RepoSwitcher() {
   const reduceMotion = useReducedMotion() ?? false;
@@ -41,8 +37,11 @@ export function RepoSwitcher() {
   const uid = useId();
   const listboxId = `${uid}-repo-listbox`;
 
-  const activeRepo = useActiveRepo();
-  const setActive = useSetActiveRepo();
+  const activeReposQuery = useActiveRepos();
+  const toggleActive = useToggleActiveRepo();
+  const activeRepos = activeReposQuery.data ?? [];
+  const activeRepoIds = useMemo(() => new Set(activeRepos.map((r) => r.id)), [activeRepos]);
+
   // Only fetch the live list once the panel is open (avoid a proxy call at header mount).
   const reposQuery = useUserRepos(open);
   const repos = reposQuery.data ?? [];
@@ -51,8 +50,7 @@ export function RepoSwitcher() {
     openRef.current = open;
   }, [open]);
 
-  // Open on the shared event; focus the search field. The query is lazily
-  // enabled via `reposQuery.fetchStatus` gated on `open` below.
+  // Open on the shared event; focus the search field.
   useEffect(() => {
     function onOpen() {
       setOpen(true);
@@ -84,9 +82,8 @@ export function RepoSwitcher() {
   const filteredRef = useRef(filtered);
   filteredRef.current = filtered;
 
-  function selectRepo(owner: string, name: string) {
-    setActive.mutate({ owner, name });
-    setOpen(false);
+  function toggleRepo(owner: string, name: string) {
+    toggleActive.mutate({ owner, name });
   }
 
   // Window-level keydown handler for Escape, Arrow keys, Enter, Home, End
@@ -125,7 +122,7 @@ export function RepoSwitcher() {
         const list = filteredRef.current;
         const repo = list[idx];
         if (repo) {
-          selectRepo(repo.owner, repo.name);
+          toggleRepo(repo.owner, repo.name);
         }
       }
     }
@@ -133,7 +130,7 @@ export function RepoSwitcher() {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, []);
 
-  // Fetch the live list is gated by `enabled={open}` on `useUserRepos`.
+  // Focus the search field when opening.
   useEffect(() => {
     if (open) {
       const timer = setTimeout(() => {
@@ -155,10 +152,6 @@ export function RepoSwitcher() {
       return;
     }
   }
-
-  const currentActive = activeRepo.data
-    ? `${activeRepo.data.owner}/${activeRepo.data.name}`
-    : null;
 
   return (
     <>
@@ -223,19 +216,22 @@ export function RepoSwitcher() {
                 )}
               </div>
 
+              <div className="flex items-center justify-between border-b border-border/40 px-4 py-1.5 text-xs text-muted-foreground bg-muted/20">
+                <span className="flex items-center gap-1.5 font-medium">
+                  <Database className="h-3 w-3 text-primary" aria-hidden="true" />
+                  {activeRepos.length === 0
+                    ? "No repositories active"
+                    : `${activeRepos.length} active ${activeRepos.length === 1 ? "repository" : "repositories"}`}
+                </span>
+                <span className="text-[11px] text-muted-foreground/80">Click or press Enter to toggle</span>
+              </div>
+
               <div
                 id={listboxId}
                 role="listbox"
                 aria-label="Repositories"
                 className="max-h-[55vh] overflow-y-auto p-2 no-scrollbar"
               >
-                {currentActive && (
-                  <div className="flex items-center gap-2 px-2.5 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                    <Database className="h-3 w-3" aria-hidden="true" />
-                    Active: {currentActive}
-                  </div>
-                )}
-
                 {reposQuery.isError ? (
                   <div className="px-2 py-8 text-center text-sm text-destructive">
                     Failed to load repositories.
@@ -248,7 +244,7 @@ export function RepoSwitcher() {
                   <div className="flex flex-col gap-0.5">
                     {filtered.map((repo, index) => {
                       const isActive = index === activeIndex;
-                      const isSelected = repo.id === currentActive;
+                      const isSelected = activeRepoIds.has(repo.id);
                       return (
                         <div
                           key={repo.id}
@@ -260,7 +256,7 @@ export function RepoSwitcher() {
                             if (event.movementX === 0 && event.movementY === 0) return;
                             setActivePos(index);
                           }}
-                          onClick={() => selectRepo(repo.owner, repo.name)}
+                          onClick={() => toggleRepo(repo.owner, repo.name)}
                           className={cn(
                             "group flex cursor-pointer items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm transition-colors duration-100",
                             isActive
@@ -269,17 +265,24 @@ export function RepoSwitcher() {
                             isSelected && "text-primary font-medium",
                           )}
                         >
+                          <div
+                            className={cn(
+                              "flex h-4 w-4 shrink-0 items-center justify-center rounded border transition-colors",
+                              isSelected
+                                ? "border-primary bg-primary text-primary-foreground"
+                                : "border-muted-foreground/40 bg-transparent",
+                            )}
+                          >
+                            {isSelected && <Check className="h-3 w-3" aria-hidden="true" />}
+                          </div>
                           <FolderGit2
                             className="h-3.5 w-3.5 shrink-0 text-muted-foreground"
                             aria-hidden="true"
                           />
                           <span className="min-w-0 flex-1 truncate font-medium">{repo.id}</span>
-                          {isSelected && (
-                            <Check className="h-3.5 w-3.5 shrink-0 text-primary" aria-hidden="true" />
-                          )}
                           {isActive && (
                             <span className="ml-auto inline-flex items-center gap-1 rounded bg-background/80 px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground border border-border/60">
-                              <span className="text-[9px]">Select</span> ↵
+                              <span className="text-[9px]">Toggle</span> ↵
                             </span>
                           )}
                         </div>
@@ -287,6 +290,19 @@ export function RepoSwitcher() {
                     })}
                   </div>
                 )}
+              </div>
+
+              <div className="flex items-center justify-between border-t border-border/60 px-4 py-2.5 bg-card/60">
+                <span className="text-xs text-muted-foreground font-mono">
+                  {activeRepos.length} selected
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setOpen(false)}
+                  className="inline-flex h-7 items-center justify-center rounded-md bg-primary px-3 text-xs font-medium text-primary-foreground shadow-xs transition-colors hover:bg-primary/90 cursor-pointer"
+                >
+                  Done
+                </button>
               </div>
             </motion.div>
           </div>

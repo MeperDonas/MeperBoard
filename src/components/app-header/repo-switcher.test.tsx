@@ -97,7 +97,7 @@ describe("RepoSwitcher", () => {
     expect(screen.queryByRole("option", { name: /meperdonas\/meperboard/i })).not.toBeInTheDocument();
   });
 
-  it("marks the selected repo as active and closes", async () => {
+  it("toggles the clicked repo as active and allows multi-select", async () => {
     mockFetch({ "/api/github/user/repos": () => jsonResponse(liveRepos) });
     render(<RepoSwitcher />, { wrapper: queryWrapper(client) });
     openSwitcher();
@@ -106,9 +106,29 @@ describe("RepoSwitcher", () => {
       expect(screen.getByRole("option", { name: /acme\/widgets/i })).toBeInTheDocument(),
     );
 
+    // Toggle acme/widgets ON
     fireEvent.click(screen.getByRole("option", { name: /acme\/widgets/i }));
 
-    await waitFor(() => expect(repoRepo.getActive()).resolves.toMatchObject({ owner: "acme", name: "widgets" }));
+    await waitFor(() =>
+      expect(repoRepo.getActiveRepos()).resolves.toEqual([
+        expect.objectContaining({ id: "acme/widgets", is_active: true }),
+      ]),
+    );
+
+    // Dialog stays open so user can pick another repo
+    expect(screen.getByRole("dialog", { name: /switch repository/i })).toBeInTheDocument();
+
+    // Toggle meperdonas/meperboard ON as well
+    fireEvent.click(screen.getByRole("option", { name: /meperdonas\/meperboard/i }));
+
+    await waitFor(async () => {
+      const active = await repoRepo.getActiveRepos();
+      expect(active).toHaveLength(2);
+    });
+
+    // Close via Done button
+    fireEvent.click(screen.getByRole("button", { name: /done/i }));
+
     await waitFor(() =>
       expect(screen.queryByRole("dialog", { name: /switch repository/i })).not.toBeInTheDocument(),
     );

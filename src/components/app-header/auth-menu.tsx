@@ -11,6 +11,8 @@ interface AuthMenuProps {
   user: AuthUser;
   /** The persisted active repo, or `undefined` while it resolves. */
   activeRepo?: Repo;
+  /** All persisted active repos. */
+  activeRepos?: Repo[];
   onLogout: () => void;
   onClose: () => void;
 }
@@ -21,7 +23,7 @@ interface AuthMenuProps {
  * Displays user identity with tags, active repository info,
  * API health/rate limit, and disconnect action.
  */
-export function AuthMenu({ user, activeRepo, onLogout, onClose }: AuthMenuProps) {
+export function AuthMenu({ user, activeRepo, activeRepos, onLogout, onClose }: AuthMenuProps) {
   const reduceMotion = useReducedMotion() ?? false;
 
   function handleLogout() {
@@ -29,9 +31,12 @@ export function AuthMenu({ user, activeRepo, onLogout, onClose }: AuthMenuProps)
     onClose();
   }
 
-  const activeRepoLabel = activeRepo
-    ? `${activeRepo.owner}/${activeRepo.name}`
-    : `${DEFAULT_REPO.owner}/${DEFAULT_REPO.name}`;
+  const repos = activeRepos ?? (activeRepo ? [activeRepo] : []);
+  const activeRepoLabel = repos.length === 0
+    ? `${DEFAULT_REPO.owner}/${DEFAULT_REPO.name}`
+    : repos.length === 1
+      ? `${repos[0].owner}/${repos[0].name}`
+      : `${repos.length} active repositories`;
   const rateLimitRemaining = user.rate_limit?.remaining ?? 5000;
 
   return (
@@ -79,10 +84,10 @@ export function AuthMenu({ user, activeRepo, onLogout, onClose }: AuthMenuProps)
         <div className="flex items-center justify-between text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
           <span className="flex items-center gap-1.5">
             <FolderGit2 className="h-3 w-3 text-primary" />
-            Active Repository
+            Active {repos.length > 1 ? "Repositories" : "Repository"}
           </span>
           <span className="rounded bg-primary/10 px-1.5 py-0.2 text-[9px] font-medium text-primary">
-            Tracked
+            {repos.length > 1 ? `${repos.length} Active` : "Tracked"}
           </span>
         </div>
         <div className="mt-1 truncate font-mono text-xs font-semibold text-foreground">

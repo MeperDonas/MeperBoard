@@ -5,7 +5,7 @@ import { ChevronDown, Loader2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 import { cn } from "../../lib/utils";
-import { useActiveRepo } from "../../state";
+import { useActiveRepos } from "../../state";
 import { AuthMenu } from "./auth-menu";
 import { ConnectModal } from "./connect-modal";
 import { GithubMark } from "./github-mark";
@@ -21,7 +21,7 @@ import { useAuth } from "./use-auth";
  */
 export function AuthButton() {
   const { user, isLoading, login, logout } = useAuth();
-  const activeRepo = useActiveRepo();
+  const activeRepos = useActiveRepos();
   const [menuOpen, setMenuOpen] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -96,7 +96,7 @@ export function AuthButton() {
           {menuOpen && (
             <AuthMenu
               user={user}
-              activeRepo={activeRepo.data}
+              activeRepos={activeRepos.data}
               onLogout={() => void logout()}
               onClose={() => setMenuOpen(false)}
             />

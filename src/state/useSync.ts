@@ -1,11 +1,9 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useMemo } from "react";
 
-import { githubItemRepo } from "../data/repositories";
-import type { GithubItem, RepoId } from "../data/types";
+import { githubItemRepo, repoRepo } from "../data/repositories";
+import type { RepoId } from "../data/types";
 import { GitHubConnector } from "../domain/sync/connector";
 import { queryKeys } from "./query-keys";
-import { useActiveRepo } from "./use-repos";
 
 const GITHUB_API_ORIGIN = "https://api.github.com";
 
@@ -39,34 +37,51 @@ export function proxyFetcher(url: string): Promise<Response> {
  * mirror. Local cards are intentionally NOT invalidated — sync never touches
  * them.
  *
- * The source repo defaults to the persisted active repo (repoRepo), falling
- * back to `DEFAULT_REPO` only when no active repo has been selected. An
- * explicit `owner`/`name` option always wins.
+ * When multiple repos are active, syncs each active repo sequentially.
+ * An explicit `owner`/`name` option always wins.
  */
 export function useSync(options: SyncOptions = {}) {
   const queryClient = useQueryClient();
-  const activeRepo = useActiveRepo();
-
-  const connector = useMemo(
-    () => options.connector ?? buildDefaultConnector(options, activeRepo.data),
-    [options.connector, options.owner, options.name, options.fetcher, activeRepo.data],
-  );
 
   return useMutation({
-    mutationFn: () => connector.sync(),
+    mutationFn: async () => {
+      if (options.connector) {
+        return options.connector.sync();
+      }
+
+      if (options.owner && options.name) {
+        const connector = new GitHubConnector({
+          owner: options.owner,
+          name: options.name,
+          fetcher: options.fetcher ?? proxyFetcher,
+          store: githubItemRepo,
+        });
+        return connector.sync();
+      }
+
+      const activeRepos = await repoRepo.getActiveRepos();
+      const targetRepos = activeRepos.length > 0 ? activeRepos : [DEFAULT_REPO];
+
+      const results = [];
+      for (const repo of targetRepos) {
+        const connector = new GitHubConnector({
+          owner: repo.owner,
+          name: repo.name,
+          fetcher: options.fetcher ?? proxyFetcher,
+          store: githubItemRepo,
+        });
+        results.push(await connector.sync());
+      }
+
+      return {
+        imported: results.reduce((sum, r) => sum + r.imported, 0),
+        paused: results.some((r) => r.paused),
+      };
+    },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.board });
       void queryClient.invalidateQueries({ queryKey: queryKeys.backlog });
       void queryClient.invalidateQueries({ queryKey: queryKeys.issueDetail });
     },
-  });
-}
-
-function buildDefaultConnector(options: SyncOptions, activeRepo?: { owner: string; name: string }): GitHubConnector {
-  return new GitHubConnector({
-    owner: options.owner ?? activeRepo?.owner ?? DEFAULT_REPO.owner,
-    name: options.name ?? activeRepo?.name ?? DEFAULT_REPO.name,
-    fetcher: options.fetcher ?? proxyFetcher,
-    store: githubItemRepo,
   });
 }

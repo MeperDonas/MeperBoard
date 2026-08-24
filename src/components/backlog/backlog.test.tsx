@@ -81,6 +81,24 @@ describe("Backlog", () => {
     expect(backlogItems()).toHaveLength(1);
   });
 
+  it("filters by repository through the custom select when multiple repos exist", async () => {
+    await repoRepo.toggleActive("acme", "widgets");
+    await githubItemRepo.upsert(makeGithubItem({ repo: "meperdonas/meperboard", number: 1, title: "Meper card" }));
+    await githubItemRepo.upsert(makeGithubItem({ repo: "acme/widgets", number: 2, title: "Acme card" }));
+
+    renderBacklog();
+
+    await waitFor(() => expect(screen.getByText("Meper card")).toBeInTheDocument());
+    expect(screen.getByText("Acme card")).toBeInTheDocument();
+    expect(backlogItems()).toHaveLength(2);
+
+    changeSelect("Repository", "widgets");
+
+    await waitFor(() => expect(screen.queryByText("Meper card")).not.toBeInTheDocument());
+    expect(screen.getByText("Acme card")).toBeInTheDocument();
+    expect(backlogItems()).toHaveLength(1);
+  });
+
   it("sorts by the selected field and direction", async () => {
     await githubItemRepo.upsert(
       makeGithubItem({

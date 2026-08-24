@@ -57,7 +57,7 @@ describe("useBacklog", () => {
   });
 
   it("surfaces an error when reading the store fails", async () => {
-    vi.spyOn(githubItemRepo, "getAllByRepo").mockRejectedValue(new Error("boom"));
+    vi.spyOn(githubItemRepo, "getAllByRepos").mockRejectedValue(new Error("boom"));
 
     const { result } = renderHook(() => useBacklog(), { wrapper: queryWrapper(client) });
 
@@ -76,5 +76,22 @@ describe("useBacklog", () => {
 
     expect(result.current.data).toHaveLength(1);
     expect(result.current.data![0].repo).toBe("meperdonas/meperboard");
+  });
+
+  it("includes cards from all active repos when multiple are selected", async () => {
+    await githubItemRepo.upsert(makeGithubItem({ repo: "meperdonas/meperboard", number: 1 }));
+    await githubItemRepo.upsert(makeGithubItem({ repo: "acme/widgets", number: 2 }));
+    await githubItemRepo.upsert(makeGithubItem({ repo: "other/repo", number: 3 }));
+    await repoRepo.toggleActive("acme", "widgets"); // meperdonas is already active from beforeEach
+
+    const { result } = renderHook(() => useBacklog(), { wrapper: queryWrapper(client) });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    expect(result.current.data).toHaveLength(2);
+    expect(result.current.data!.map((c) => c.repo).sort()).toEqual([
+      "acme/widgets",
+      "meperdonas/meperboard",
+    ]);
   });
 });

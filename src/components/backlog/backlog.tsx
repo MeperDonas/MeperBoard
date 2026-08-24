@@ -98,6 +98,7 @@ export function Backlog({ localActions }: BacklogProps = {}) {
 
   const [typeFilter, setTypeFilter] = useState<TypeFilter>("all");
   const [labelFilter, setLabelFilter] = useState<string>(ALL_LABELS);
+  const [repoFilter, setRepoFilter] = useState<string>("all");
   const [sortField, setSortField] = useState<SortField>("updated");
   const [sortDir, setSortDir] = useState<SortDirection>("desc");
   const [groupBy, setGroupBy] = useState<BacklogGroupKey>("none");
@@ -136,12 +137,29 @@ export function Backlog({ localActions }: BacklogProps = {}) {
     [labels],
   );
 
+  const repos = useMemo(
+    () =>
+      Array.from(
+        new Set(cards.map((card) => card.repo).filter((r): r is string => r != null)),
+      ).sort(),
+    [cards],
+  );
+
+  const repoOptions = useMemo(
+    () => [
+      { value: "all", label: "All repositories" },
+      ...repos.map((repo) => ({ value: repo, label: repo.split("/")[1] ?? repo })),
+    ],
+    [repos],
+  );
+
   const filters: BacklogFilters = useMemo(() => {
     const result: BacklogFilters = {};
     if (typeFilter !== "all") result.type = typeFilter;
     if (labelFilter !== ALL_LABELS) result.label = labelFilter;
+    if (repoFilter !== "all") result.repo = repoFilter;
     return result;
-  }, [typeFilter, labelFilter]);
+  }, [typeFilter, labelFilter, repoFilter]);
 
   const sort: BacklogSort = useMemo(
     () => ({ field: sortField, direction: sortDir }),
@@ -165,7 +183,7 @@ export function Backlog({ localActions }: BacklogProps = {}) {
     [entries],
   );
 
-  const viewSignature = `${typeFilter}|${labelFilter}|${searchQuery}|${sortField}|${sortDir}|${groupBy}|${pageSize}`;
+  const viewSignature = `${typeFilter}|${labelFilter}|${repoFilter}|${searchQuery}|${sortField}|${sortDir}|${groupBy}|${pageSize}`;
   useEffect(() => {
     setPage(1);
   }, [viewSignature]);
@@ -249,6 +267,9 @@ export function Backlog({ localActions }: BacklogProps = {}) {
         labelFilter={labelFilter}
         onLabelFilterChange={setLabelFilter}
         labelOptions={labelOptions}
+        repoFilter={repoFilter}
+        onRepoFilterChange={setRepoFilter}
+        repoOptions={repoOptions}
         groupBy={groupBy}
         onGroupByChange={setGroupBy}
         sortField={sortField}

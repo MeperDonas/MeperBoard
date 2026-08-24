@@ -12,8 +12,11 @@ export interface RepoRef {
   id: string;
 }
 
-/** React Query key for the persisted active repo (repoRepo row). */
+/** React Query key for the persisted active repo (legacy single repo). */
 export const ACTIVE_REPO_KEY = ["repo", "active"] as const;
+
+/** React Query key for all persisted active repos. */
+export const ACTIVE_REPOS_KEY = ["repos", "active"] as const;
 
 /**
  * The user's repositories, listed live from GitHub via the read-only proxy
@@ -50,11 +53,34 @@ export function useUserRepos(enabled = true) {
   });
 }
 
-/** The persisted active repo, or `undefined` before it resolves. */
+/** All currently active repos. */
+export function useActiveRepos() {
+  return useQuery<Repo[]>({
+    queryKey: ACTIVE_REPOS_KEY,
+    queryFn: () => repoRepo.getActiveRepos(),
+  });
+}
+
+/** The persisted single active repo (or first active), or `undefined` before it resolves. */
 export function useActiveRepo() {
   return useQuery<Repo | undefined>({
     queryKey: ACTIVE_REPO_KEY,
     queryFn: () => repoRepo.getActive(),
+  });
+}
+
+/** Toggle a repo's active state and invalidate queries. */
+export function useToggleActiveRepo() {
+  const queryClient = useQueryClient();
+  return useMutation<Repo, Error, { owner: string; name: string }>({
+    mutationFn: ({ owner, name }) => repoRepo.toggleActive(owner, name),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ACTIVE_REPOS_KEY });
+      void queryClient.invalidateQueries({ queryKey: ACTIVE_REPO_KEY });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.board });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.backlog });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.issueDetail });
+    },
   });
 }
 
@@ -68,6 +94,7 @@ export function useSetActiveRepo() {
     mutationFn: ({ owner, name }) => repoRepo.setActive(owner, name),
     onSuccess: (repo) => {
       queryClient.setQueryData(ACTIVE_REPO_KEY, repo);
+      void queryClient.invalidateQueries({ queryKey: ACTIVE_REPOS_KEY });
       void queryClient.invalidateQueries({ queryKey: queryKeys.board });
       void queryClient.invalidateQueries({ queryKey: queryKeys.backlog });
       void queryClient.invalidateQueries({ queryKey: queryKeys.issueDetail });

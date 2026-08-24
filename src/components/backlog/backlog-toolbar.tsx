@@ -41,6 +41,9 @@ export interface BacklogToolbarProps {
   labelFilter: string;
   onLabelFilterChange: (label: string) => void;
   labelOptions: { value: string; label: string }[];
+  repoFilter?: string;
+  onRepoFilterChange?: (repo: string) => void;
+  repoOptions?: { value: string; label: string }[];
   groupBy: BacklogGroupKey;
   onGroupByChange: (group: BacklogGroupKey) => void;
   sortField: SortField;
@@ -57,6 +60,9 @@ export function BacklogToolbar({
   labelFilter,
   onLabelFilterChange,
   labelOptions,
+  repoFilter,
+  onRepoFilterChange,
+  repoOptions,
   groupBy,
   onGroupByChange,
   sortField,
@@ -92,6 +98,19 @@ export function BacklogToolbar({
           className="w-32"
         />
       </div>
+
+      {repoOptions && repoOptions.length > 2 && onRepoFilterChange && (
+        <div className="flex flex-col gap-1.5 text-xs font-medium text-muted-foreground">
+          <span>Repository</span>
+          <Select
+            aria-label="Repository"
+            options={repoOptions}
+            value={repoFilter ?? "all"}
+            onValueChange={onRepoFilterChange}
+            className="w-36"
+          />
+        </div>
+      )}
 
       <div className="flex flex-col gap-1.5 text-xs font-medium text-muted-foreground">
         <span>Label</span>

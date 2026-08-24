@@ -46,7 +46,7 @@ describe("useBoard", () => {
   });
 
   it("surfaces an error when reading the store fails", async () => {
-    vi.spyOn(githubItemRepo, "getAllByRepo").mockRejectedValue(new Error("indexeddb down"));
+    vi.spyOn(githubItemRepo, "getAllByRepos").mockRejectedValue(new Error("indexeddb down"));
 
     const { result } = renderHook(() => useBoard(), { wrapper: queryWrapper(client) });
 
@@ -65,5 +65,20 @@ describe("useBoard", () => {
 
     const titles = result.current.data!.columns.flatMap((column) => column.cards.map((card) => card.title));
     expect(titles).toEqual(["Meper"]);
+  });
+
+  it("shows cards from all active repos when multiple are active", async () => {
+    await githubItemRepo.upsert(makeGithubItem({ repo: "meperdonas/meperboard", number: 1, title: "Meper" }));
+    await githubItemRepo.upsert(makeGithubItem({ repo: "acme/widgets", number: 1, title: "Acme" }));
+    await githubItemRepo.upsert(makeGithubItem({ repo: "other/repo", number: 1, title: "Other" }));
+    // meperdonas/meperboard was set active in beforeEach; now activate acme/widgets as well
+    await repoRepo.toggleActive("acme", "widgets");
+
+    const { result } = renderHook(() => useBoard(), { wrapper: queryWrapper(client) });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    const titles = result.current.data!.columns.flatMap((column) => column.cards.map((card) => card.title));
+    expect(titles.sort()).toEqual(["Acme", "Meper"]);
   });
 });

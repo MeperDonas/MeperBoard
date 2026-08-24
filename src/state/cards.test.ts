@@ -71,6 +71,16 @@ describe("filterCards", () => {
     expect(filterCards(cards, { label: "bug", type: "local" })).toHaveLength(1);
   });
 
+  it("filters by repo", () => {
+    const multiRepoCards: Card[] = [
+      toCard(makeGithubItem({ repo: "acme/a", number: 1 })),
+      toCard(makeGithubItem({ repo: "acme/b", number: 2 })),
+      toCard(makeLocalItem({ id: "l1" })),
+    ];
+    expect(filterCards(multiRepoCards, { repo: "acme/a" })).toHaveLength(1);
+    expect(filterCards(multiRepoCards, { repo: "acme/b" })).toHaveLength(1);
+  });
+
   it("returns all cards when no filters are given", () => {
     expect(filterCards(cards, {})).toHaveLength(3);
     expect(filterCards(cards)).toHaveLength(3);
@@ -198,6 +208,24 @@ describe("loadCards / loadBoard (IndexedDB)", () => {
     await githubItemRepo.upsert(makeGithubItem({ repo: "acme/widgets", number: 1 }));
 
     const cards = await loadCards();
+    expect(cards).toHaveLength(1);
+    expect(cards[0].repo).toBe("MeperDonas/MeperPOS");
+  });
+
+  it("loads cards from multiple active repos", async () => {
+    await githubItemRepo.upsert(makeGithubItem({ repo: "acme/a", number: 1 }));
+    await githubItemRepo.upsert(makeGithubItem({ repo: "acme/b", number: 2 }));
+    await githubItemRepo.upsert(makeGithubItem({ repo: "acme/c", number: 3 }));
+    await localItemRepo.upsert(makeLocalItem({ id: "l1" }));
+
+    const cards = await loadCards(["acme/a", "acme/b"]);
+    expect(cards).toHaveLength(3); // 2 github (a + b) + 1 local
+    expect(cards.some((c) => c.repo === "acme/c")).toBe(false);
+  });
+
+  it("falls back to DEFAULT_REPO_ID when given an empty array", async () => {
+    await githubItemRepo.upsert(makeGithubItem({ repo: "MeperDonas/MeperPOS", number: 1 }));
+    const cards = await loadCards([]);
     expect(cards).toHaveLength(1);
     expect(cards[0].repo).toBe("MeperDonas/MeperPOS");
   });

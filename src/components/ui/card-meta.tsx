@@ -24,6 +24,7 @@ export interface CardMetaInfo {
   number: number | null;
   state: string | null;
   updatedAt: string;
+  repo?: string | null;
 }
 
 export function formatState(state: string): string {
@@ -106,6 +107,7 @@ export function CardMetaRow({
 }) {
   const kindLabel =
     card.type === "local" || !KIND_META[card.type] ? null : KIND_META[card.type].label;
+  const repoName = card.repo ? card.repo.split("/")[1] ?? card.repo : null;
 
   return (
     <>
@@ -116,6 +118,14 @@ export function CardMetaRow({
           <span className="truncate text-xs text-muted-foreground">{kindLabel}</span>
         )}
       </span>
+      {repoName && (
+        <span
+          title={card.repo ?? undefined}
+          className="truncate font-mono text-[10px] text-muted-foreground/80 bg-muted/40 px-1 py-0.2 rounded border border-border/40"
+        >
+          {repoName}
+        </span>
+      )}
       <CardStateBadge state={card.state} />
       {trailing}
       <CardRelativeDate iso={card.updatedAt} className="ml-auto" />

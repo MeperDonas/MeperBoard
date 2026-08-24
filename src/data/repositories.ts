@@ -31,6 +31,16 @@ export const githubItemRepo = {
     return db.github_items.where("repo").equals(repo).toArray();
   },
 
+  /** All mirrored items for multiple repos. */
+  async getAllByRepos(repos: RepoId[]): Promise<GithubItem[]> {
+    if (repos.length === 0) return [];
+    if (repos.length === 1) return githubItemRepo.getAllByRepo(repos[0]);
+    const results = await Promise.all(
+      repos.map((repo) => db.github_items.where("repo").equals(repo).toArray()),
+    );
+    return results.flat();
+  },
+
   async setColumnOverride(repo: RepoId, number: number, column_id: string): Promise<void> {
     await db.column_overrides.put({ repo, number, column_id });
   },
@@ -123,6 +133,27 @@ export const repoRepo = {
     const repo: Repo = { id: `${owner}/${name}`, owner, name, last_sync_at: null, is_active: true };
     await db.repos.put(repo);
     return repo;
+  },
+
+  /** Toggle a repo's active state (activate or deactivate). */
+  async toggleActive(owner: string, name: string): Promise<Repo> {
+    const id = `${owner}/${name}`;
+    const existing = await db.repos.get(id);
+    const isCurrentlyActive = existing?.is_active === true;
+    const repo: Repo = {
+      id,
+      owner,
+      name,
+      last_sync_at: existing?.last_sync_at ?? null,
+      is_active: !isCurrentlyActive,
+    };
+    await db.repos.put(repo);
+    return repo;
+  },
+
+  /** All currently active repos. */
+  getActiveRepos(): Promise<Repo[]> {
+    return db.repos.filter((repo) => repo.is_active === true).toArray();
   },
 
   /** The currently active repo, or `undefined` when none has been selected. */
