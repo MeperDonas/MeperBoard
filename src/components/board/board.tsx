@@ -216,7 +216,7 @@ function BoardColumn({
       data-column-id={column.id}
       aria-label={`${column.title} column`}
       className={cn(
-        "relative flex h-full max-h-full w-72 shrink-0 flex-col rounded-xl border border-t-2 border-t-primary/70 bg-card/85 backdrop-blur-xs p-2.5 transition-all duration-200",
+        "relative flex h-full max-h-full flex-1 min-w-[280px] max-w-[420px] flex-col rounded-xl border border-t-2 border-t-primary/70 bg-card/85 backdrop-blur-xs p-2.5 transition-all duration-200",
         isOver
           ? "border-primary ring-2 ring-primary/40 bg-primary/[0.06] shadow-xl shadow-primary/15"
           : "border-border hover:border-primary/40 hover:shadow-md hover:shadow-primary/5",
@@ -402,10 +402,10 @@ function BoardSkeleton() {
   return (
     <div className="p-4 md:px-6" role="status" aria-label="Loading board">
       <div className="flex gap-3 overflow-hidden">
-        {[0, 1, 2].map((column) => (
+        {[0, 1, 2, 3, 4].map((column) => (
           <div
             key={column}
-            className="flex w-72 shrink-0 flex-col gap-2 rounded-xl border bg-card p-2"
+            className="flex flex-1 min-w-[280px] max-w-[420px] flex-col gap-2 rounded-xl border bg-card p-2"
           >
             <div className="mx-2 my-2 h-4 w-24 animate-pulse rounded bg-muted" />
             {[0, 1, 2].map((item) => (
