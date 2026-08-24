@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 import { cn } from "../../lib/utils";
+import { CreateCardModal } from "../local-cards";
 import { AuthButton } from "./auth-button";
 import { CommandPalette } from "./command-palette";
 import { PalettePicker } from "./palette-picker";
@@ -81,6 +82,7 @@ export function AppHeader() {
         </div>
       </nav>
       <RepoSwitcher />
+      <CreateCardModal />
     </header>
   );
 }

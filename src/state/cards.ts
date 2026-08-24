@@ -187,7 +187,18 @@ export function buildBoard(columns: Column[], cards: Card[]): Board {
   }
   const ordered = [...columns].sort((a, b) => a.order - b.order);
   return {
-    columns: ordered.map((col) => ({ ...col, cards: byColumn.get(col.id) ?? [] })),
+    columns: ordered.map((col) => {
+      const colCards = byColumn.get(col.id) ?? [];
+      if (col.id === "done") {
+        colCards.sort((a, b) => {
+          const timeA = new Date(a.updatedAt || a.createdAt).getTime() || 0;
+          const timeB = new Date(b.updatedAt || b.createdAt).getTime() || 0;
+          if (timeA !== timeB) return timeB - timeA;
+          return compareStrings(a.id, b.id);
+        });
+      }
+      return { ...col, cards: colCards };
+    }),
   };
 }
 

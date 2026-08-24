@@ -55,6 +55,8 @@ const MODAL_SPRING = { type: "spring", stiffness: 380, damping: 28 } as const;
  * - Keyboard shortcuts: `Ctrl+Enter` / `⌘+Enter` to submit, `Esc` to cancel.
  * - Listen for global `OPEN_CREATE_LOCAL_CARD_EVENT` to open from anywhere.
  */
+let isAnyModalOpen = false;
+
 export function CreateCardModal({
   open: controlledOpen,
   defaultStatus = "todo",
@@ -75,6 +77,7 @@ export function CreateCardModal({
   const open = isControlled ? controlledOpen : isOpen;
 
   function handleClose() {
+    isAnyModalOpen = false;
     if (isControlled) {
       controlledOnClose?.();
     } else {
@@ -85,6 +88,8 @@ export function CreateCardModal({
   // Listen for the cross-component signal to open the modal
   useEffect(() => {
     function handleOpenEvent(event: Event) {
+      if (isAnyModalOpen) return;
+      isAnyModalOpen = true;
       const customEvent = event as CustomEvent<{ status?: LocalStatus }>;
       if (customEvent.detail?.status) {
         setStatus(customEvent.detail.status);

@@ -153,6 +153,19 @@ describe("buildBoard", () => {
     expect(board.columns[2].cards).toHaveLength(1); // in-progress (doing)
     expect(board.columns[4].cards).toHaveLength(1); // done
   });
+
+  it("sorts cards in the Done column from most recent to oldest", () => {
+    const cards = [
+      toCard(makeGithubItem({ number: 1, state: "closed", github_updated_at: "2026-08-01T00:00:00Z" })),
+      toCard(makeGithubItem({ number: 2, state: "closed", github_updated_at: "2026-08-03T00:00:00Z" })),
+      toCard(makeGithubItem({ number: 3, state: "closed", github_updated_at: "2026-08-02T00:00:00Z" })),
+    ];
+
+    const board = buildBoard(DEFAULT_BOARD_COLUMNS, cards);
+    const doneCards = board.columns.find((c) => c.id === "done")?.cards ?? [];
+
+    expect(doneCards.map((c) => c.number)).toEqual([2, 3, 1]);
+  });
 });
 
 describe("loadCards / loadBoard (IndexedDB)", () => {
