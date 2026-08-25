@@ -136,7 +136,7 @@ describe("LocalCards", () => {
     expect(await localItemRepo.get("l1")).toMatchObject({ title: "Buy milk" });
   });
 
-  it("deletes a card", async () => {
+  it("deletes a card with confirmation", async () => {
     await localItemRepo.upsert(makeLocalItem({ id: "l1", title: "Buy milk" }));
 
     renderLocalCards();
@@ -145,6 +145,9 @@ describe("LocalCards", () => {
 
     const row = screen.getByText("Buy milk").closest("li") as HTMLElement;
     fireEvent.click(within(row).getByRole("button", { name: "Delete" }));
+
+    // Click confirmation
+    fireEvent.click(within(row).getByRole("button", { name: "Confirm delete Buy milk" }));
 
     await waitFor(() => expect(screen.queryByText("Buy milk")).not.toBeInTheDocument());
     expect(await localItemRepo.getAll()).toHaveLength(0);

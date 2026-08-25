@@ -49,6 +49,7 @@ export function BoardWorkspace() {
   const { data: allCards = [] } = useBacklog();
   const moveCard = useMoveCard();
   const resetCard = useResetCardMove();
+  const { remove: removeLocalCard } = useLocalCards();
 
   useEffect(() => {
     saveLocalCardsCollapsed(collapsed);
@@ -114,6 +115,10 @@ export function BoardWorkspace() {
               isManualOverride: false,
             });
           }
+        }}
+        onDeleteLocal={(localId) => {
+          removeLocalCard.mutate(localId);
+          setSelectedCard(null);
         }}
       />
     </div>

@@ -268,6 +268,7 @@ function LocalCardRow({
   onEdit: () => void;
   onDelete: () => void;
 }) {
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
   const status = statusForColumn(card.column_id);
   const statusColor =
     status === "done"
@@ -275,6 +276,16 @@ function LocalCardRow({
       : status === "doing"
         ? "text-blue-500 bg-blue-500/10 border-blue-500/20"
         : "text-amber-500 bg-amber-500/10 border-amber-500/20";
+
+  function handleDeleteClick(e: React.MouseEvent) {
+    e.stopPropagation();
+    if (!confirmingDelete) {
+      setConfirmingDelete(true);
+      return;
+    }
+    onDelete();
+    setConfirmingDelete(false);
+  }
 
   return (
     <li className="group relative flex flex-col gap-2 rounded-xl border border-border/80 bg-background/90 p-3 shadow-xs transition-all duration-150 hover:border-primary/50 hover:shadow-md">
@@ -300,16 +311,31 @@ function LocalCardRow({
           >
             Edit
           </Button>
-          <Button
-            type="button"
-            variant="secondary"
-            size="sm"
-            onClick={onDelete}
-            aria-label="Delete"
-            className="h-6 px-2 text-[10px] hover:border-destructive/40 hover:text-destructive"
-          >
-            Delete
-          </Button>
+          {confirmingDelete ? (
+            <Button
+              type="button"
+              variant="destructive"
+              size="sm"
+              onClick={handleDeleteClick}
+              onBlur={() => setConfirmingDelete(false)}
+              aria-label={`Confirm delete ${card.title}`}
+              className="h-6 px-2 text-[10px]"
+            >
+              Delete?
+            </Button>
+          ) : (
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={handleDeleteClick}
+              aria-label="Delete"
+              className="h-6 px-2 text-[10px] hover:border-destructive/40 hover:text-destructive"
+            >
+              <Trash2 className="h-3 w-3 mr-1" />
+              Delete
+            </Button>
+          )}
         </div>
       </div>
 
