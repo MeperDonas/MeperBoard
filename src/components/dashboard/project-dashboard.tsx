@@ -220,12 +220,12 @@ export function ProjectDashboard({
         <div className="flex items-center gap-2 flex-wrap">
           {/* Stat Pills (Squared with icons, no bullet dots) */}
           <div className="flex items-center gap-1.5" data-testid="total-count">
-            <span className="inline-flex items-center gap-1 rounded-md border border-primary/30 bg-primary/10 px-2 py-1 font-mono text-[11px] font-semibold text-primary shadow-2xs">
+            <span className="inline-flex items-center gap-1 rounded-[4px] border border-primary/30 bg-primary/10 px-2 py-0.5 font-mono text-[11px] font-semibold text-primary shadow-2xs">
               <CircleDot className="h-3 w-3 text-primary" aria-hidden="true" />
               <span>{counts.issue} issues</span>
             </span>
 
-            <span className="inline-flex items-center gap-1 rounded-md border border-primary/30 bg-primary/10 px-2 py-1 font-mono text-[11px] font-semibold text-primary shadow-2xs">
+            <span className="inline-flex items-center gap-1 rounded-[4px] border border-primary/30 bg-primary/10 px-2 py-0.5 font-mono text-[11px] font-semibold text-primary shadow-2xs">
               <GitPullRequest className="h-3 w-3 text-primary" aria-hidden="true" />
               <span>{counts.pull} PRs</span>
             </span>
@@ -236,7 +236,7 @@ export function ProjectDashboard({
               aria-expanded={!localCardsCollapsed}
               aria-controls="local-cards-panel"
               onClick={onToggleLocalCards}
-              className="inline-flex items-center gap-1 rounded-md border border-primary/40 bg-primary px-2 py-1 font-mono text-[11px] font-bold text-primary-foreground shadow-2xs transition-colors hover:bg-primary-hover cursor-pointer"
+              className="inline-flex items-center gap-1 rounded-[4px] border border-primary/40 bg-primary px-2 py-0.5 font-mono text-[11px] font-bold text-primary-foreground shadow-2xs transition-colors hover:bg-primary-hover cursor-pointer"
               title="Toggle local cards panel"
               aria-label="Toggle local cards panel"
             >

@@ -67,7 +67,7 @@ export function CardRepoBadge({ repo }: { repo?: string | null }) {
     <span
       title={repo}
       className={cn(
-        "inline-flex items-center rounded-md px-1.5 py-0.5 font-mono text-[10px] font-semibold border shadow-2xs transition-colors shrink-0",
+        "inline-flex items-center rounded-[4px] px-1.5 py-0.5 font-mono text-[10px] font-semibold border shadow-2xs transition-colors shrink-0",
         scheme.badge,
       )}
     >
@@ -95,7 +95,7 @@ export function CardStateBadge({ state }: { state: string | null }) {
   return (
     <Badge
       variant={state === "open" ? "success" : "neutral"}
-      className="shrink-0 rounded-md text-[10px] px-1.5 py-0.5 font-medium"
+      className="shrink-0 rounded-[4px] text-[10px] px-1.5 py-0.5 font-medium"
     >
       {formatState(state)}
     </Badge>
