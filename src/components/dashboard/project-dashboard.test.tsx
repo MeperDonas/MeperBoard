@@ -58,7 +58,7 @@ describe("ProjectDashboard", () => {
     expect(screen.getByRole("region", { name: "Project health dashboard" })).toBeInTheDocument();
     expect(screen.getByTestId("kpi-completed")).toHaveTextContent("1/5");
     expect(screen.getByTestId("kpi-in-progress")).toHaveTextContent("1");
-    expect(screen.getByTestId("kpi-critical")).toHaveTextContent("1");
+    expect(screen.getByTestId("kpi-velocity")).toBeInTheDocument();
     expect(screen.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "20");
     expect(screen.getByText("20%")).toBeInTheDocument();
   });

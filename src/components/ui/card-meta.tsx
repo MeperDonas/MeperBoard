@@ -57,7 +57,7 @@ export function CardSourceKindBadge({ type }: { type: CardMetaInfo["type"] }) {
 }
 
 /**
- * Distinctive repository badge with colored indicator dot and custom scheme.
+ * Distinctive repository badge with custom scheme without bullet dot.
  */
 export function CardRepoBadge({ repo }: { repo?: string | null }) {
   if (!repo) return null;
@@ -67,11 +67,10 @@ export function CardRepoBadge({ repo }: { repo?: string | null }) {
     <span
       title={repo}
       className={cn(
-        "inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 font-mono text-[10px] font-semibold border shadow-2xs transition-colors shrink-0",
+        "inline-flex items-center rounded-md px-1.5 py-0.5 font-mono text-[10px] font-semibold border shadow-2xs transition-colors shrink-0",
         scheme.badge,
       )}
     >
-      <span className="h-1.5 w-1.5 rounded-full shrink-0" style={{ backgroundColor: scheme.dot }} />
       <span>{shortName}</span>
     </span>
   );
@@ -96,7 +95,7 @@ export function CardStateBadge({ state }: { state: string | null }) {
   return (
     <Badge
       variant={state === "open" ? "success" : "neutral"}
-      className="shrink-0 text-[10px] px-1.5 py-0.2 font-medium"
+      className="shrink-0 rounded-md text-[10px] px-1.5 py-0.5 font-medium"
     >
       {formatState(state)}
     </Badge>
