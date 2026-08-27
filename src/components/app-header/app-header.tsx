@@ -32,18 +32,18 @@ export function AppHeader() {
 
   return (
     <header className="sticky top-0 z-40 border-b border-border/80 dark:border-primary/10 bg-background/85 backdrop-blur-md">
-      <nav className="flex h-14 items-center gap-2 px-4 md:px-6" aria-label="Primary">
+      <nav className="flex h-14 items-center gap-1.5 px-3 sm:gap-2 sm:px-4 md:px-6" aria-label="Primary">
         <Link
           href="/"
-          className="mr-4 flex items-center gap-2 rounded-md text-sm font-semibold tracking-tight transition-opacity hover:opacity-90"
+          className="mr-1 sm:mr-4 flex items-center gap-2 rounded-md text-sm font-semibold tracking-tight transition-opacity hover:opacity-90"
         >
           <span
-            className="flex h-6 w-6 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-sm shadow-primary/30 ring-1 ring-primary/40"
+            className="flex h-6 w-6 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-sm shadow-primary/30 ring-1 ring-primary/40 shrink-0"
             aria-hidden="true"
           >
             <LayoutGrid className="h-3.5 w-3.5" />
           </span>
-          <span className="bg-gradient-to-r from-foreground via-foreground to-foreground/80 bg-clip-text">
+          <span className="hidden xs:inline sm:inline bg-gradient-to-r from-foreground via-foreground to-foreground/80 bg-clip-text">
             MeperBoard
           </span>
         </Link>
@@ -56,7 +56,7 @@ export function AppHeader() {
               href={item.href}
               aria-current={active ? "page" : undefined}
               className={cn(
-                "relative rounded-md px-3 py-1.5 text-sm font-medium transition-all duration-150",
+                "relative rounded-md px-2 sm:px-3 py-1.5 text-xs sm:text-sm font-medium transition-all duration-150 shrink-0",
                 active
                   ? "bg-primary/10 font-semibold text-primary"
                   : "text-muted-foreground hover:bg-accent/60 hover:text-foreground",
@@ -73,7 +73,7 @@ export function AppHeader() {
           );
         })}
 
-        <div className="ml-auto flex items-center gap-2">
+        <div className="ml-auto flex items-center gap-1 sm:gap-2">
           <RepoButton />
           <CommandPalette />
           <AuthButton />

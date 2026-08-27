@@ -9,6 +9,7 @@ import {
   GitPullRequest,
   RotateCcw,
   Sparkles,
+  Trash2,
   X,
 } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -31,6 +32,7 @@ export interface CardPreviewDrawerProps {
   onClose: () => void;
   onMoveColumn?: (cardId: string, targetColumnId: string) => void;
   onResetToGit?: (cardId: string) => void;
+  onDeleteLocal?: (localId: string) => void;
   columns?: ColumnOption[];
 }
 
@@ -47,10 +49,24 @@ export function CardPreviewDrawer({
   onClose,
   onMoveColumn,
   onResetToGit,
+  onDeleteLocal,
   columns = DEFAULT_COLUMNS,
 }: CardPreviewDrawerProps) {
   const reduceMotion = useReducedMotion() ?? false;
   const [copied, setCopied] = useState(false);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+
+  useEffect(() => {
+    setConfirmingDelete(false);
+  }, [card?.id]);
+
+  function handleDeleteLocal() {
+    if (!card || !onDeleteLocal) return;
+    const localId = card.id.startsWith("local:") ? card.id.replace(/^local:/, "") : card.id;
+    onDeleteLocal(localId);
+    setConfirmingDelete(false);
+    onClose();
+  }
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
@@ -83,6 +99,7 @@ export function CardPreviewDrawer({
     label: col.title,
   }));
 
+  const isLocal = card?.source === "local" || card?.type === "local";
   const isOpen = card?.state === "open";
   const kindLabel =
     card?.type === "pull" ? "Pull Request" : card?.type === "issue" ? "Issue" : "Local Card";
@@ -111,10 +128,10 @@ export function CardPreviewDrawer({
             animate={reduceMotion ? { opacity: 1 } : { x: 0 }}
             exit={reduceMotion ? { opacity: 0 } : { x: "100%" }}
             transition={{ type: "spring", damping: 28, stiffness: 320 }}
-            className="relative z-10 flex h-full w-full max-w-xl flex-col border-l border-border bg-card shadow-2xl md:max-w-2xl"
+            className="relative z-10 flex h-full w-full max-w-full flex-col border-l border-border bg-card shadow-2xl sm:max-w-xl md:max-w-2xl"
           >
             {/* Top Navigation Bar */}
-            <div className="flex items-center justify-between border-b border-border/80 px-5 py-3.5">
+            <div className="flex items-center justify-between border-b border-border/80 px-3.5 sm:px-5 py-3 sm:py-3.5">
               <div className="flex items-center gap-2">
                 <span className="flex items-center gap-1.5 rounded-md bg-muted px-2 py-1 text-xs font-medium text-muted-foreground">
                   <KindIcon className="h-3.5 w-3.5 text-primary" aria-hidden="true" />
@@ -141,6 +158,46 @@ export function CardPreviewDrawer({
               </div>
 
               <div className="flex items-center gap-1.5">
+                {isLocal && onDeleteLocal && (
+                  confirmingDelete ? (
+                    <div className="flex items-center gap-1">
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="sm"
+                        onClick={handleDeleteLocal}
+                        className="h-8 px-2.5 text-xs font-semibold"
+                        aria-label="Confirm delete card"
+                      >
+                        <Trash2 className="mr-1 h-3.5 w-3.5" />
+                        Delete Card?
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setConfirmingDelete(false)}
+                        className="h-8 px-2 text-xs"
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  ) : (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setConfirmingDelete(true)}
+                      title="Delete local card"
+                      aria-label="Delete local card"
+                      className="h-8 px-2 text-xs text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                      <span className="ml-1 hidden sm:inline">Delete</span>
+                    </Button>
+                  )
+                )}
+
                 <Button
                   type="button"
                   variant="ghost"

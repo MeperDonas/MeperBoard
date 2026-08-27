@@ -274,7 +274,7 @@ export function CommandPalette() {
         <span className="hidden text-muted-foreground/80 sm:inline">Search…</span>
         <kbd
           aria-hidden="true"
-          className="rounded border border-border/60 bg-background/60 px-1 font-mono text-[10px] text-muted-foreground"
+          className="hidden md:inline rounded border border-border/60 bg-background/60 px-1 font-mono text-[10px] text-muted-foreground"
         >
           {shortcutLabel}
         </kbd>

@@ -94,4 +94,51 @@ describe("CardPreviewDrawer", () => {
 
     expect(handleReset).toHaveBeenCalledWith(overriddenCard.id);
   });
+
+  it("does not render a delete button for GitHub cards", () => {
+    render(<CardPreviewDrawer card={mockCard} onClose={vi.fn()} onDeleteLocal={vi.fn()} />);
+    expect(screen.queryByRole("button", { name: /delete/i })).not.toBeInTheDocument();
+  });
+
+  it("renders a delete button for local cards with two-step confirmation", () => {
+    const handleDelete = vi.fn();
+    const handleClose = vi.fn();
+    const mockLocalCard: Card = {
+      id: "local:l-123",
+      source: "local",
+      type: "local",
+      title: "Buy coffee beans",
+      body: "Dark roast",
+      labels: [],
+      columnId: "todo",
+      repo: null,
+      number: null,
+      state: null,
+      htmlUrl: null,
+      linkedPrs: [],
+      createdAt: "2026-08-20T00:00:00Z",
+      updatedAt: "2026-08-22T00:00:00Z",
+    };
+
+    render(
+      <CardPreviewDrawer
+        card={mockLocalCard}
+        onClose={handleClose}
+        onDeleteLocal={handleDelete}
+      />,
+    );
+
+    const deleteBtn = screen.getByRole("button", { name: "Delete local card" });
+    expect(deleteBtn).toBeInTheDocument();
+
+    fireEvent.click(deleteBtn);
+
+    const confirmBtn = screen.getByRole("button", { name: "Confirm delete card" });
+    expect(confirmBtn).toBeInTheDocument();
+
+    fireEvent.click(confirmBtn);
+
+    expect(handleDelete).toHaveBeenCalledWith("l-123");
+    expect(handleClose).toHaveBeenCalled();
+  });
 });

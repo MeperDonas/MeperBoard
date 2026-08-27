@@ -88,14 +88,14 @@ export function ProjectDashboard({
   return (
     <header
       className={cn(
-        "relative z-30 flex flex-col gap-3.5 border-b border-border/70 bg-card/25 px-4 py-3.5 backdrop-blur-md md:px-6",
+        "relative z-30 flex flex-col gap-3.5 border-b border-border/70 bg-card/25 px-3 sm:px-4 py-3 sm:py-3.5 backdrop-blur-md md:px-6",
         className,
       )}
       role="region"
       aria-label="Project health dashboard"
     >
       {/* Row 1: KPI Summary Cards */}
-      <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4 sm:gap-3">
+      <div className="grid grid-cols-1 xs:grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3">
         {/* Card 1: Completed */}
         <div
           className="flex items-center gap-3 rounded-xl border border-border/60 bg-card/60 p-3 shadow-xs transition-colors hover:border-emerald-500/40"

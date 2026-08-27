@@ -216,7 +216,7 @@ function RailLayout({
               animate={{ x: 0, opacity: 1 }}
               exit={{ x: "100%", opacity: 0 }}
               transition={{ type: "spring", damping: 32, stiffness: 380 }}
-              className="relative z-50 flex h-full w-full max-w-sm sm:max-w-md flex-col border-l border-border/80 bg-card/95 backdrop-blur-2xl shadow-2xl"
+              className="relative z-50 flex h-full w-full max-w-full sm:max-w-md flex-col border-l border-border/80 bg-card/95 backdrop-blur-2xl shadow-2xl"
             >
               <LocalCards onClose={onToggle} />
             </motion.aside>

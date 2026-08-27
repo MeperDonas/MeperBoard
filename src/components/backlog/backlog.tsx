@@ -258,7 +258,7 @@ export function Backlog({ localActions }: BacklogProps = {}) {
   };
 
   return (
-    <div className="mx-auto w-full max-w-4xl p-4 md:p-6" role="region" aria-label="Backlog">
+    <div className="mx-auto w-full max-w-4xl p-2.5 sm:p-4 md:p-6" role="region" aria-label="Backlog">
       <BacklogToolbar
         searchInput={searchInput}
         onSearchChange={setSearchInput}
@@ -526,14 +526,14 @@ function GroupHeader({ label, count }: { label: string; count: number }) {
 
 function BacklogStatus({ children }: { children: ReactNode }) {
   return (
-    <p className="mx-auto w-full max-w-4xl p-4 text-sm text-muted-foreground md:p-6">{children}</p>
+    <p className="mx-auto w-full max-w-4xl p-2.5 sm:p-4 text-sm text-muted-foreground md:p-6">{children}</p>
   );
 }
 
 function BacklogSkeleton() {
   return (
     <div
-      className="mx-auto w-full max-w-4xl p-4 md:p-6"
+      className="mx-auto w-full max-w-4xl p-2.5 sm:p-4 md:p-6"
       role="status"
       aria-label="Loading backlog"
     >
