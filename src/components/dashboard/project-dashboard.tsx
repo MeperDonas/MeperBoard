@@ -106,21 +106,21 @@ export function ProjectDashboard({
       aria-label="Project health dashboard"
     >
       {/* Row 1: 3 KPI Summary Cards with large typography */}
-      <div className="grid grid-cols-3 gap-2 sm:gap-3">
+      <div className="grid grid-cols-3 gap-1.5 xs:gap-2 sm:gap-3">
         {/* Card 1: Completed */}
         <div
-          className="flex items-center gap-3 rounded-xl border border-border/60 bg-card/60 p-3.5 shadow-xs transition-colors hover:border-emerald-500/40"
+          className="flex items-center gap-2 sm:gap-3 rounded-xl border border-border/60 bg-card/60 p-2 sm:p-3.5 shadow-xs transition-colors hover:border-emerald-500/40"
           data-testid="kpi-completed"
         >
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-500 ring-1 ring-emerald-500/20">
-            <CheckCircle2 className="h-5 w-5" />
+          <div className="flex h-8 w-8 sm:h-10 sm:w-10 shrink-0 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-500 ring-1 ring-emerald-500/20">
+            <CheckCircle2 className="h-4 w-4 sm:h-5 sm:w-5" />
           </div>
           <div className="min-w-0">
-            <div className="flex items-baseline gap-1 font-mono text-2xl font-bold tracking-tight text-foreground">
+            <div className="flex items-baseline gap-0.5 sm:gap-1 font-mono text-base sm:text-2xl font-bold tracking-tight text-foreground">
               <span>{metrics.completed}</span>
-              <span className="text-sm font-medium text-muted-foreground">/{metrics.total}</span>
+              <span className="text-xs sm:text-sm font-medium text-muted-foreground">/{metrics.total}</span>
             </div>
-            <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+            <p className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-muted-foreground truncate">
               Completed
             </p>
           </div>
@@ -128,17 +128,17 @@ export function ProjectDashboard({
 
         {/* Card 2: In Progress */}
         <div
-          className="flex items-center gap-3 rounded-xl border border-border/60 bg-card/60 p-3.5 shadow-xs transition-colors hover:border-amber-500/40"
+          className="flex items-center gap-2 sm:gap-3 rounded-xl border border-border/60 bg-card/60 p-2 sm:p-3.5 shadow-xs transition-colors hover:border-amber-500/40"
           data-testid="kpi-in-progress"
         >
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-amber-500/10 text-amber-500 ring-1 ring-amber-500/20">
-            <Clock className="h-5 w-5" />
+          <div className="flex h-8 w-8 sm:h-10 sm:w-10 shrink-0 items-center justify-center rounded-lg bg-amber-500/10 text-amber-500 ring-1 ring-amber-500/20">
+            <Clock className="h-4 w-4 sm:h-5 sm:w-5" />
           </div>
           <div className="min-w-0">
-            <div className="font-mono text-2xl font-bold tracking-tight text-foreground">
+            <div className="font-mono text-base sm:text-2xl font-bold tracking-tight text-foreground">
               {metrics.inProgress}
             </div>
-            <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+            <p className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-muted-foreground truncate">
               In Progress
             </p>
           </div>
@@ -146,18 +146,18 @@ export function ProjectDashboard({
 
         {/* Card 3: Velocity / Scope */}
         <div
-          className="flex items-center gap-3 rounded-xl border border-border/60 bg-card/60 p-3.5 shadow-xs transition-colors hover:border-primary/40"
+          className="flex items-center gap-2 sm:gap-3 rounded-xl border border-border/60 bg-card/60 p-2 sm:p-3.5 shadow-xs transition-colors hover:border-primary/40"
           data-testid="kpi-velocity"
         >
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary ring-1 ring-primary/20">
-            <TrendingUp className="h-5 w-5" />
+          <div className="flex h-8 w-8 sm:h-10 sm:w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary ring-1 ring-primary/20">
+            <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5" />
           </div>
           <div className="min-w-0">
-            <div className="flex items-baseline gap-1 font-mono text-2xl font-bold tracking-tight text-foreground">
+            <div className="flex items-baseline gap-0.5 sm:gap-1 font-mono text-base sm:text-2xl font-bold tracking-tight text-foreground">
               <span>{metrics.velocityScore}</span>
-              <span className="text-sm font-medium text-muted-foreground">/{metrics.totalScore} pts</span>
+              <span className="text-xs sm:text-sm font-medium text-muted-foreground">/{metrics.totalScore} pts</span>
             </div>
-            <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+            <p className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-muted-foreground truncate">
               Velocity
             </p>
           </div>

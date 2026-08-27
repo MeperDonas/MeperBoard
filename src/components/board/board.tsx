@@ -3,7 +3,8 @@
 import {
   DndContext,
   DragOverlay,
-  PointerSensor,
+  MouseSensor,
+  TouchSensor,
   useDraggable,
   useDroppable,
   useSensor,
@@ -85,7 +86,15 @@ export function Board({
   const { data, isPending, isError } = useBoard();
   const reduceMotion = useReducedMotion() ?? false;
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(MouseSensor, {
+      activationConstraint: { distance: 5 },
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: {
+        delay: 200,
+        tolerance: 6,
+      },
+    }),
   );
   const [moves, setMoves] = useState<Record<string, string>>({});
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -164,10 +173,10 @@ export function Board({
       onDragEnd={handleDragEnd}
       onDragCancel={() => setActiveId(null)}
     >
-      <div className="flex h-full flex-col p-2.5 sm:p-4 md:px-6" role="region" aria-label="Kanban board">
+      <div className="flex h-full flex-col p-2.5 sm:p-4 md:px-6 overflow-hidden" role="region" aria-label="Kanban board">
         {totalCards === 0 ? <EmptyState /> : null}
         <LayoutGroup>
-          <div className="flex flex-1 min-h-0 gap-3 overflow-x-auto pb-2 no-scrollbar snap-x snap-mandatory sm:snap-none scroll-smooth">
+          <div className="flex flex-1 min-h-0 gap-3 overflow-x-auto overflow-y-hidden pb-2 no-scrollbar snap-x snap-mandatory sm:snap-none scroll-smooth touch-pan-x">
             {filteredBoard.columns.map((column: BoardColumnType) => (
               <BoardColumn
                 key={column.id}
@@ -216,7 +225,7 @@ function BoardColumn({
       data-column-id={column.id}
       aria-label={`${column.title} column`}
       className={cn(
-        "relative flex h-full max-h-full flex-1 min-w-[85vw] sm:min-w-[280px] max-w-[420px] snap-center sm:snap-align-none flex-col rounded-xl border border-t-2 border-t-primary/70 bg-card/85 backdrop-blur-xs p-2.5 transition-all duration-200",
+        "relative flex h-full max-h-full flex-1 min-w-[82vw] xs:min-w-[75vw] sm:min-w-[280px] max-w-[420px] snap-center sm:snap-align-none shrink-0 flex-col rounded-xl border border-t-2 border-t-primary/70 bg-card/85 backdrop-blur-xs p-2.5 transition-all duration-200",
         isOver
           ? "border-primary ring-2 ring-primary/40 bg-primary/[0.06] shadow-xl shadow-primary/15"
           : "border-border hover:border-primary/40 hover:shadow-md hover:shadow-primary/5",
@@ -257,7 +266,7 @@ function BoardColumn({
           {total}
         </span>
       </header>
-      <ul className="flex flex-1 min-h-0 flex-col gap-2.5 overflow-y-auto pr-0.5 no-scrollbar py-1">
+      <ul className="flex flex-1 min-h-0 flex-col gap-2.5 overflow-y-auto pr-0.5 no-scrollbar py-1 overscroll-contain touch-pan-y">
         {column.cards.length === 0 && !isOver ? (
           <li className="flex items-center justify-center rounded-lg border border-dashed py-8 transition-colors">
             <span className="text-xs text-muted-foreground">No cards</span>
@@ -313,6 +322,7 @@ function BoardCard({
       animate={{ opacity: 1, y: 0 }}
       {...listeners}
       {...attributes}
+      style={{ touchAction: "pan-y" }}
       className={cn(
         "group relative cursor-grab shrink-0 rounded-xl border bg-elevated p-3 text-card-foreground shadow-xs transition-all duration-200 ease-out select-none active:cursor-grabbing",
         "hover:-translate-y-0.5 hover:shadow-lg hover:shadow-primary/5 hover:border-primary/40 hover:bg-elevated/95",
@@ -400,12 +410,12 @@ function BoardStatus({ children }: { children: ReactNode }) {
 /** Column-shaped placeholders while the board query resolves. */
 function BoardSkeleton() {
   return (
-    <div className="p-2.5 sm:p-4 md:px-6" role="status" aria-label="Loading board">
-      <div className="flex gap-3 overflow-hidden">
+    <div className="p-2.5 sm:p-4 md:px-6 h-full flex flex-col" role="status" aria-label="Loading board">
+      <div className="flex flex-1 gap-3 overflow-x-auto overflow-y-hidden pb-2 snap-x snap-mandatory sm:snap-none">
         {[0, 1, 2, 3, 4].map((column) => (
           <div
             key={column}
-            className="flex flex-1 min-w-[85vw] sm:min-w-[280px] max-w-[420px] snap-center sm:snap-align-none flex-col gap-2 rounded-xl border bg-card p-2"
+            className="flex flex-1 min-w-[82vw] xs:min-w-[75vw] sm:min-w-[280px] max-w-[420px] snap-center sm:snap-align-none shrink-0 flex-col gap-2 rounded-xl border bg-card p-2"
           >
             <div className="mx-2 my-2 h-4 w-24 animate-pulse rounded bg-muted" />
             {[0, 1, 2].map((item) => (
