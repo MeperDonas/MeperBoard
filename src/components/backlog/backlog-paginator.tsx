@@ -1,4 +1,4 @@
-﻿import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { PAGE_SIZE_OPTIONS } from "../../lib/pagination";
 import { Select } from "../ui/select";
 
@@ -32,7 +32,7 @@ export function BacklogPaginator({
     <nav
       data-testid="backlog-pager"
       aria-label="Backlog pagination"
-      className="mt-3 flex items-center justify-between gap-3"
+      className="mt-3 flex flex-wrap items-center justify-between gap-2.5 sm:gap-3"
     >
       <p className="text-xs tabular-nums text-muted-foreground">
         Showing {first}–{last} of {totalItems}

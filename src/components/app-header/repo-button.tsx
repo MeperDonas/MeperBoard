@@ -34,9 +34,9 @@ export function RepoButton() {
         "hover:border-primary/50 hover:bg-accent/50",
       )}
     >
-      <FolderGit2 className="h-3.5 w-3.5 text-primary" aria-hidden="true" />
-      <span className="max-w-28 truncate font-mono text-[11px] sm:max-w-44">{repoLabel}</span>
-      <ChevronDown className="h-3 w-3 text-muted-foreground" aria-hidden="true" />
+      <FolderGit2 className="h-3.5 w-3.5 text-primary shrink-0" aria-hidden="true" />
+      <span className="max-w-16 xs:max-w-28 truncate font-mono text-[11px] sm:max-w-44">{repoLabel}</span>
+      <ChevronDown className="h-3 w-3 text-muted-foreground shrink-0" aria-hidden="true" />
     </button>
   );
 }

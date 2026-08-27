@@ -206,7 +206,7 @@ export function CreateCardModal({
           <div className="h-1 w-full bg-gradient-to-r from-primary/60 via-primary to-primary/60" />
 
           {/* Header */}
-          <div className="flex items-center justify-between border-b border-border/60 px-5 py-4">
+          <div className="flex items-center justify-between border-b border-border/60 px-4 py-3 sm:px-5 sm:py-4">
             <div className="flex items-center gap-3">
               <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary shadow-xs ring-1 ring-primary/30">
                 <Sparkles className="h-4 w-4" />
@@ -231,7 +231,7 @@ export function CreateCardModal({
             </button>
           </div>
 
-          <form onSubmit={handleSubmit} className="flex flex-col gap-4 p-5">
+          <form onSubmit={handleSubmit} className="flex flex-col gap-4 p-4 sm:p-5">
             {/* Status Segmented Control */}
             <div>
               <div className="mb-1.5 flex items-center justify-between">
@@ -248,7 +248,7 @@ export function CreateCardModal({
                   />
                 </div>
               </div>
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-2 xs:grid-cols-3 gap-2">
                 {STATUS_ITEMS.map((item) => {
                   const isSelected = item.value === status;
                   return (
@@ -382,8 +382,8 @@ export function CreateCardModal({
             </div>
 
             {/* Modal Footer */}
-            <div className="mt-2 flex items-center justify-between border-t border-border/60 pt-4">
-              <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+            <div className="mt-2 flex flex-wrap items-center justify-between gap-2 border-t border-border/60 pt-4">
+              <div className="hidden sm:flex items-center gap-1.5 text-[11px] text-muted-foreground">
                 <kbd className="rounded border border-border/70 bg-background/80 px-1.5 py-0.5 font-mono text-[10px]">
                   Ctrl+Enter
                 </kbd>
@@ -395,13 +395,13 @@ export function CreateCardModal({
                 <span>to cancel</span>
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex w-full sm:w-auto items-center justify-end gap-2">
                 <Button
                   type="button"
                   variant="secondary"
                   size="sm"
                   onClick={handleClose}
-                  className="rounded-xl px-3 text-xs"
+                  className="rounded-xl px-3 text-xs flex-1 sm:flex-initial"
                 >
                   Cancel
                 </Button>
@@ -412,7 +412,7 @@ export function CreateCardModal({
                   aria-label="Add card"
                   disabled={!title.trim() || create.isPending}
                   loading={create.isPending}
-                  className="rounded-xl px-4 text-xs font-semibold shadow-md shadow-primary/20"
+                  className="rounded-xl px-4 text-xs font-semibold shadow-md shadow-primary/20 flex-1 sm:flex-initial"
                 >
                   <Plus className="h-3.5 w-3.5 mr-1" />
                   Add card

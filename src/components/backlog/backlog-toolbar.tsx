@@ -71,8 +71,8 @@ export function BacklogToolbar({
   onToggleSortDir,
 }: BacklogToolbarProps) {
   return (
-    <div className="mb-4 flex flex-wrap items-end gap-3">
-      <label className="flex min-w-48 flex-1 flex-col gap-1.5 text-xs font-medium text-muted-foreground">
+    <div className="mb-4 flex flex-wrap items-end gap-2.5 sm:gap-3">
+      <label className="flex min-w-[200px] flex-1 flex-col gap-1.5 text-xs font-medium text-muted-foreground">
         <span>Search</span>
         <span className="relative inline-flex w-full items-center">
           <Search
@@ -95,7 +95,7 @@ export function BacklogToolbar({
           options={TYPE_OPTIONS}
           value={typeFilter}
           onValueChange={(next) => onTypeFilterChange(next as TypeFilter)}
-          className="w-32"
+          className="w-28 sm:w-32"
         />
       </div>
 
@@ -107,7 +107,7 @@ export function BacklogToolbar({
             options={repoOptions}
             value={repoFilter ?? "all"}
             onValueChange={onRepoFilterChange}
-            className="w-36"
+            className="w-32 sm:w-36"
           />
         </div>
       )}
@@ -119,7 +119,7 @@ export function BacklogToolbar({
           options={labelOptions}
           value={labelFilter}
           onValueChange={onLabelFilterChange}
-          className="w-40"
+          className="w-32 sm:w-40"
         />
       </div>
 
@@ -130,7 +130,7 @@ export function BacklogToolbar({
           options={GROUP_OPTIONS}
           value={groupBy}
           onValueChange={(next) => onGroupByChange(next as BacklogGroupKey)}
-          className="w-36"
+          className="w-32 sm:w-36"
         />
       </div>
 
@@ -142,7 +142,7 @@ export function BacklogToolbar({
             options={SORT_FIELD_OPTIONS}
             value={sortField}
             onValueChange={(next) => onSortFieldChange(next as SortField)}
-            className="w-36"
+            className="w-32 sm:w-36"
           />
           <button
             type="button"
@@ -161,7 +161,7 @@ export function BacklogToolbar({
         </div>
       </div>
 
-      <div className="ml-auto flex items-center pb-0.5">
+      <div className="flex items-center pb-0.5 sm:ml-auto">
         <SyncControl />
       </div>
     </div>
