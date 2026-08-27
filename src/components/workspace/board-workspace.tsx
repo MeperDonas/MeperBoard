@@ -49,6 +49,7 @@ export function BoardWorkspace() {
   const { data: allCards = [] } = useBacklog();
   const moveCard = useMoveCard();
   const resetCard = useResetCardMove();
+  const { remove: removeLocalCard } = useLocalCards();
 
   useEffect(() => {
     saveLocalCardsCollapsed(collapsed);
@@ -72,20 +73,16 @@ export function BoardWorkspace() {
     <div className="flex h-screen flex-col overflow-hidden">
       <AppHeader />
 
-      {/* KPI Project Health Dashboard & Control Toolbar */}
+      {/* KPI Project Health Dashboard & Consolidated Control Toolbar */}
       <ProjectDashboard
         cards={allCards}
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
         filterType={filterType}
         onFilterTypeChange={setFilterType}
+        onToggleLocalCards={toggle}
+        localCardsCollapsed={collapsed}
       />
-
-      <div className="flex flex-wrap items-center gap-3 border-b px-4 py-2 md:px-6">
-        <SyncControl />
-        <TotalCount />
-        <RailToggle collapsed={collapsed} onToggle={toggle} />
-      </div>
 
       <div className="flex-1 min-h-0 overflow-hidden">
         <RailLayout
@@ -119,50 +116,12 @@ export function BoardWorkspace() {
             });
           }
         }}
+        onDeleteLocal={(localId) => {
+          removeLocalCard.mutate(localId);
+          setSelectedCard(null);
+        }}
       />
     </div>
-  );
-}
-
-/**
- * Rail collapse toggle: PanelRight icon + text label + local-card count pill.
- * Sits in the sync bar so it remains reachable while the rail is collapsed;
- * `aria-expanded` + `aria-controls` bind it to the panel it reveals.
- */
-function RailToggle({
-  collapsed,
-  onToggle,
-}: {
-  collapsed: boolean;
-  onToggle: () => void;
-}) {
-  return (
-    <Button
-      type="button"
-      variant="secondary"
-      size="sm"
-      data-testid="rail-toggle"
-      onClick={onToggle}
-      aria-expanded={!collapsed}
-      aria-controls="local-cards-panel"
-      title={collapsed ? "Show local cards" : "Hide local cards"}
-      className="shadow-xs"
-    >
-      <PanelRight className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
-      <span className="text-xs text-muted-foreground">Local</span>
-      <LocalCountPill />
-    </Button>
-  );
-}
-
-/** Count pill inside the rail toggle; reflects stored local cards. */
-function LocalCountPill() {
-  const { list } = useLocalCards();
-  const count = list.data?.length ?? 0;
-  return (
-    <Badge variant="accent" className="tabular-nums font-mono normal-case">
-      {count}
-    </Badge>
   );
 }
 
@@ -222,35 +181,6 @@ function RailLayout({
             </motion.aside>
           </div>
         </Portal>
-      )}
-    </div>
-  );
-}
-
-/**
- * Sync-bar stat pills (UX round 3): one pill per kind across currently synced
- * cards — issues with a CircleDot icon, PRs with GitPullRequest — plus a local
- * pill only when local cards exist. The group keeps the stable `total-count`
- * testid.
- */
-function TotalCount() {
-  const { data } = useBacklog();
-  const counts = useMemo(() => countByType(data ?? []), [data]);
-
-  return (
-    <div className="ml-auto flex items-center gap-2" data-testid="total-count">
-      <Badge variant="accent" className="tabular-nums font-mono">
-        <CircleDot className="h-3 w-3 text-primary" aria-hidden="true" />
-        {counts.issue} issues
-      </Badge>
-      <Badge variant="accent" className="tabular-nums font-mono">
-        <GitPullRequest className="h-3 w-3 text-primary" aria-hidden="true" />
-        {counts.pull} PRs
-      </Badge>
-      {counts.local > 0 && (
-        <Badge variant="primary" className="tabular-nums font-mono">
-          {counts.local} local
-        </Badge>
       )}
     </div>
   );

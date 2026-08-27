@@ -333,6 +333,10 @@ export function Backlog({ localActions }: BacklogProps = {}) {
             });
           }
         }}
+        onDeleteLocal={(localId) => {
+          localActions?.onDeleteLocal?.(localId);
+          setSelectedCard(null);
+        }}
       />
     </div>
   );
