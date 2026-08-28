@@ -80,12 +80,12 @@ export function AuthButton() {
           <img
             src={user.avatar_url}
             alt={user.login}
-            className="h-5 w-5 rounded-full ring-1 ring-border/80"
+            className="h-5 w-5 rounded-full ring-1 ring-border/80 shrink-0"
           />
-          <span className="max-w-32 truncate">{user.login}</span>
+          <span className="max-w-16 sm:max-w-32 truncate">{user.login}</span>
           <ChevronDown
             className={cn(
-              "h-3.5 w-3.5 text-muted-foreground transition-transform duration-150",
+              "h-3.5 w-3.5 text-muted-foreground transition-transform duration-150 shrink-0",
               menuOpen && "rotate-180",
             )}
             aria-hidden="true"
@@ -114,13 +114,14 @@ export function AuthButton() {
         aria-expanded={modalOpen}
         aria-haspopup="dialog"
         className={cn(
-          "inline-flex h-8 items-center gap-1.5 rounded-lg border bg-card px-2.5 text-xs font-medium text-muted-foreground shadow-xs transition-colors duration-150",
+          "inline-flex h-8 items-center gap-1.5 rounded-lg border bg-card px-2 sm:px-2.5 text-xs font-medium text-muted-foreground shadow-xs transition-colors duration-150",
           "hover:border-foreground/20 hover:text-foreground",
           modalOpen && "border-primary/60 text-foreground",
         )}
       >
-        <GithubMark className="h-3.5 w-3.5" />
-        Connect GitHub
+        <GithubMark className="h-3.5 w-3.5 shrink-0" />
+        <span className="hidden sm:inline">Connect GitHub</span>
+        <span className="inline sm:hidden">Connect</span>
       </button>
 
       <AnimatePresence>
