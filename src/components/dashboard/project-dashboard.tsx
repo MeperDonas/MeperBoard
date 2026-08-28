@@ -185,10 +185,10 @@ export function ProjectDashboard({
       </div>
 
       {/* Row 3: Unified Control & Action Toolbar */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
         {/* Left: Search input + Sync GitHub Mirror */}
-        <div className="flex flex-1 min-w-[280px] items-center gap-3">
-          <div className="relative min-w-[200px] max-w-sm flex-1">
+        <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
+          <div className="relative min-w-0 max-w-sm flex-1">
             <Search
               className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground"
               aria-hidden="true"
@@ -217,9 +217,9 @@ export function ProjectDashboard({
         </div>
 
         {/* Right: Stat pills + Filters + View switch + New Card */}
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex items-center justify-between sm:justify-end gap-2 overflow-x-auto no-scrollbar py-0.5">
           {/* Stat Pills (Squared with icons, no bullet dots) */}
-          <div className="flex items-center gap-1.5" data-testid="total-count">
+          <div className="flex items-center gap-1.5 shrink-0" data-testid="total-count">
             <span className="inline-flex items-center gap-1 rounded-[4px] border border-primary/30 bg-primary/10 px-2 py-0.5 font-mono text-[11px] font-semibold text-primary shadow-2xs">
               <CircleDot className="h-3 w-3 text-primary" aria-hidden="true" />
               <span>{counts.issue} issues</span>
@@ -236,13 +236,15 @@ export function ProjectDashboard({
               aria-expanded={!localCardsCollapsed}
               aria-controls="local-cards-panel"
               onClick={onToggleLocalCards}
-              className="inline-flex items-center gap-1 rounded-[4px] border border-primary/40 bg-primary px-2 py-0.5 font-mono text-[11px] font-bold text-primary-foreground shadow-2xs transition-colors hover:bg-primary-hover cursor-pointer"
+              className="inline-flex items-center gap-1 rounded-[4px] border border-primary/40 bg-primary px-2 py-0.5 font-mono text-[11px] font-bold text-primary-foreground shadow-2xs transition-colors hover:bg-primary-hover cursor-pointer shrink-0"
               title="Toggle local cards panel"
               aria-label="Toggle local cards panel"
             >
               <span>{counts.local} local</span>
             </button>
           </div>
+
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
 
           {/* Filters dropdown button */}
           <div className="relative">
@@ -410,6 +412,7 @@ export function ProjectDashboard({
                 </div>
               </>
             )}
+          </div>
           </div>
         </div>
       </div>

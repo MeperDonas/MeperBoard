@@ -176,7 +176,7 @@ export function Board({
       <div className="flex h-full flex-col p-2.5 sm:p-4 md:px-6 overflow-hidden" role="region" aria-label="Kanban board">
         {totalCards === 0 ? <EmptyState /> : null}
         <LayoutGroup>
-          <div className="flex flex-1 min-h-0 gap-3 overflow-x-auto overflow-y-hidden pb-2 no-scrollbar snap-x snap-mandatory sm:snap-none scroll-smooth touch-pan-x">
+          <div className="flex flex-1 min-h-0 gap-3 overflow-x-auto overflow-y-hidden pb-2 no-scrollbar snap-x snap-mandatory sm:snap-none scroll-smooth touch-pan-x overscroll-x-contain [-webkit-overflow-scrolling:touch]">
             {filteredBoard.columns.map((column: BoardColumnType) => (
               <BoardColumn
                 key={column.id}
@@ -225,7 +225,7 @@ function BoardColumn({
       data-column-id={column.id}
       aria-label={`${column.title} column`}
       className={cn(
-        "relative flex h-full max-h-full flex-1 min-w-[82vw] xs:min-w-[75vw] sm:min-w-[280px] max-w-[420px] snap-center sm:snap-align-none shrink-0 flex-col rounded-xl border border-t-2 border-t-primary/70 bg-card/85 backdrop-blur-xs p-2.5 transition-all duration-200",
+        "relative flex h-full max-h-full flex-1 min-w-[85vw] xs:min-w-[80vw] sm:min-w-[280px] max-w-[420px] snap-center sm:snap-align-none shrink-0 flex-col rounded-xl border border-t-2 border-t-primary/70 bg-card/85 backdrop-blur-xs p-2.5 transition-all duration-200",
         isOver
           ? "border-primary ring-2 ring-primary/40 bg-primary/[0.06] shadow-xl shadow-primary/15"
           : "border-border hover:border-primary/40 hover:shadow-md hover:shadow-primary/5",
@@ -322,9 +322,8 @@ function BoardCard({
       animate={{ opacity: 1, y: 0 }}
       {...listeners}
       {...attributes}
-      style={{ touchAction: "pan-y" }}
       className={cn(
-        "group relative cursor-grab shrink-0 rounded-xl border bg-elevated p-3 text-card-foreground shadow-xs transition-all duration-200 ease-out select-none active:cursor-grabbing",
+        "group relative cursor-grab shrink-0 rounded-xl border bg-elevated p-3 text-card-foreground shadow-xs transition-all duration-200 ease-out select-none active:cursor-grabbing touch-manipulation",
         "hover:-translate-y-0.5 hover:shadow-lg hover:shadow-primary/5 hover:border-primary/40 hover:bg-elevated/95",
         isDragging && "opacity-25 border-dashed border-primary scale-[0.98] shadow-inner",
       )}
