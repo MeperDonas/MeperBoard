@@ -102,6 +102,22 @@ describe("isAllowedPath", () => {
     expect(isAllowedPath(["repos", "meperdonas", "meperboard", "issues", "56"])).toBe(true);
   });
 
+  it("allows the repository-id issues form used by GitHub pagination Link headers", () => {
+    // GitHub points follow-up pages at api.github.com/repositories/{id}/issues
+    // even when the original request used repos/{owner}/{repo}/issues.
+    expect(isAllowedPath(["repositories", "1148441904", "issues"])).toBe(true);
+    expect(isAllowedPath(["repositories", "1148441904", "pulls"])).toBe(true);
+  });
+
+  it("allows a repository-id single-item path variant", () => {
+    expect(isAllowedPath(["repositories", "1148441904", "issues", "21"])).toBe(true);
+  });
+
+  it("rejects the repository-id form for non-issue/pull resources", () => {
+    expect(isAllowedPath(["repositories", "1148441904", "comments"])).toBe(false);
+    expect(isAllowedPath(["repositories", "1148441904"])).toBe(false);
+  });
+
   it("allows the live repo-list path user/repos for the switcher", () => {
     expect(isAllowedPath(["user", "repos"])).toBe(true);
   });
