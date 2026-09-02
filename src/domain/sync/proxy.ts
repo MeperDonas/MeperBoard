@@ -74,14 +74,20 @@ export function isAllowedOrigin(
  * paths the RepoSwitcher needs: `user/repos` (live repo list) and `user`
  * (profile). Nothing else is allowed — the relay is not re-opened to arbitrary
  * paths.
+ *
+ * GitHub's own pagination `Link` headers point follow-up pages at the
+ * repository-id form (`https://api.github.com/repositories/{id}/issues?…`),
+ * even when the original request used `repos/{owner}/{repo}/…`. The connector
+ * follows that `Link` verbatim, so the relay must accept the repository-id
+ * form for the same read-only `issues`/`pulls` resources.
  */
 export function isAllowedPath(path: string[]): boolean {
   // RepoSwitcher endpoints: `user` and `user/repos` (exactly, no deeper).
   if (path.length === 1 && path[0] === "user") return true;
   if (path.length === 2 && path[0] === "user" && path[1] === "repos") return true;
 
-  if (path.length < 2 || path[0] !== "repos") return false;
-  const resource = path[3];
+  if (path.length < 3 || (path[0] !== "repos" && path[0] !== "repositories")) return false;
+  const resource = path[0] === "repositories" ? path[2] : path[3];
   if (resource !== "issues" && resource !== "pulls") return false;
   return true;
 }
